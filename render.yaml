@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: voxform-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    # Audio files land in /tmp/storage — ephemeral on free tier (fine for UAT)
+    # Upgrade to a paid plan and add a Render Disk to make them persistent
+    envVars:
+      - key: STORAGE_PATH
+        value: /tmp/storage
+      # ── Set the values below manually in the Render dashboard ──────────────
+      # DATABASE_DSN  = mysql+aiomysql://user:pass@host:port/voxform
+      #                 (use Clever Cloud MySQL free tier — see setup notes)
+      - key: DATABASE_DSN
+        sync: false
+      # JWT_SECRET    = any strong random string (openssl rand -hex 32)
+      - key: JWT_SECRET
+        sync: false
+      # STORAGE_URL   = https://voxform-api.onrender.com/storage
+      - key: STORAGE_URL
+        sync: false
+      # CORS_ORIGINS  = https://your-app.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      # ── Optional AI keys (leave blank to skip) ────────────────────────────
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Frontend: TypeScript build ─────────────────────────────────────────────
+  frontend:
+    name: Frontend — build & type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: voxform-vite
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: voxform-vite/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # VITE_API_URL is not needed for the build to succeed (falls back
+          # to /api/v1 at runtime).  Vercel uses its own env var at deploy time.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+
+  # ── Backend: Docker image build ───────────────────────────────────────────
+  backend:
+    name: Backend — Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: voxform-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

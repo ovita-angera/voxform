@@ -1,0 +1,39 @@
+Landing Page: A simple display of the apps capabilities using relevant illustrations
+Main colors: soft blacks, calm whites, deep purplish would be a nice touch
+Fonts: Choose ones that make the best of display
+
+Desired App Features
+1. Authentication and profile management - JWT should be fine, Google SSO, For a start simplicity over clever
+2. User registrtion and login - current design is legit awesome, but if we could get some more interesting movement out of what we have so be it 
+3. Profile Creation and management - user, workspace, level of users, admin, surveyor etc
+4. Password recovery - I forgot my Password, OTP, Passkey, something simple
+5. Personalized dash with recent surveys created, fill statistics, and some simpe additions to what we already have
+6. Customizable settings and preferences - maybe profile wise, light or dark modes, 
+7. Survey input components - all types of inputs from short text, long text, page setting features such as headers, descriptions, buttons with certain predefined actions
+(I will attach a screenshot of the same)
+8. Page outlook - A well positioned component selection pane on the left, a wide canvas in the middle, a neat sleek component settings pane on the right
+9. How will this work? Multiple tabs with different actions should make this work -> Create, Edit, Share, Check People who have filled (a better name would be nice)
+10. Any other survey creation features you might be conversant with that make the app an end to end joy to work with
+11. Audio component features desired:
+    a. Ability to categorize decibel thresholds in a way easy to understand for the surveyor - is this okay or below in quality control
+    b. Prioritize use of .wav files so as not to lose any quality in case client wants to do ML with the Audio later or wants to use it for Biometrics
+    c. Allow downloads in all the audio versions available or only the mainstream ones known to many People
+    d. For the Audio thresholds: Frequency, SNR, Decibels and their layman sorta interpretations for the surveyor to tell quality level or what needs to be improved
+    e. Optimization of the audio services: noise cancelling | after or during recording, transcription services based on locale and what would be needed for this, sentiment analysis of transcribed data (for the future but a simple version would not hurt)
+12. Allow appropriate user configs for each survey component
+
+the focus is on very clean UI and solid backend Architecture
+
+Onto the tech stack:
+I love the design present at the moment, but I would like a complete reset of everything
+Steps:
+1. Delete everything
+2. Backend desired stack: FastAPI + MySQL (XAMPP) 3306 + One of the cleanest DB designs ever created + Clean Code Architecture + Best Practice
+3. Frontend: React Ts + Tailwind + Shadcn || NextJs + Shadcn + Clean Code Architecture + Best Practice
+4. Anything that can be dockerized to assist with some of the app functionality is welcome - however, i would prefer to work with it first locally before either dockerizing or deploying it to the network
+5. Github workflows and unit tests relevant to this solution are also welcome to ensure a tight end to end quality assured piece of work
+6. Allow room for iteration to get something interesting
+7. Also, create python environment to ensure everything is well put
+8. In case of better software implementation technology stack - select it and give appropriate reasons for that approach, otherwise stick to our stack
+
+Go time!

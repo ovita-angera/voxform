@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS sync_queue;
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS audio_jobs;
+DROP TABLE IF EXISTS responses;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS questions;
+DROP TABLE IF EXISTS survey_versions;
+DROP TABLE IF EXISTS surveys;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS org_members;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS organizations;

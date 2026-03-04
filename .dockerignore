@@ -1,0 +1,11 @@
+voxform-go/
+voxform-vite/
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.env
+**/.env.*
+.git
+.github
+*.md

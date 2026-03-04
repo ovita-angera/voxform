@@ -1,0 +1,30 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# ── Required environment variables (set in Railway dashboard) ─────────────────
+#
+# DATABASE_DSN   = mysql+aiomysql://user:pass@host:port/voxform
+#                  (use Railway's MySQL plugin — copy the connection URL,
+#                   replace "mysql://" with "mysql+aiomysql://")
+#
+# JWT_SECRET     = <strong random string, e.g. openssl rand -hex 32>
+#
+# STORAGE_PATH   = /app/storage
+#                  (must match the Railway volume mount path)
+#
+# STORAGE_URL    = https://<your-api-domain>.railway.app/storage
+#                  (used to build public audio URLs stored in DB)
+#
+# CORS_ORIGINS   = https://<your-app>.vercel.app
+#                  (add multiple comma-separated if needed)
+#
+# ── Optional (leave empty to disable) ────────────────────────────────────────
+#
+# GROQ_API_KEY      = gsk_...   (Whisper transcription — free tier)
+# ANTHROPIC_API_KEY = sk-ant-.. (answer extraction)
+# ─────────────────────────────────────────────────────────────────────────────

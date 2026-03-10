@@ -4,9 +4,10 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
-    # Audio files land in /tmp/storage — ephemeral on free tier (fine for UAT)
-    # Upgrade to a paid plan and add a Render Disk to make them persistent
+    healthCheckPath: /health
     envVars:
+      - key: MIGRATIONS_PATH
+        value: /app/migrations
       - key: STORAGE_PATH
         value: /tmp/storage
       # ── Set the values below manually in the Render dashboard ──────────────

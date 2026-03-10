@@ -1,5 +1,9 @@
-voxform-go/
 voxform-vite/
+voxform-go/*.go
+voxform-go/go.mod
+voxform-go/go.sum
+voxform-go/vendor/
+voxform-go/storage/
 **/__pycache__
 **/*.pyc
 **/*.pyo

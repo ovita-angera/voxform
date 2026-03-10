@@ -59,6 +59,11 @@ _storage = os.path.abspath(config.STORAGE_PATH)
 os.makedirs(_storage, exist_ok=True)
 app.mount("/storage", StaticFiles(directory=_storage), name="storage")
 
+# Health check for Render / load balancers
+@app.get("/health")
+async def health():
+    return {"ok": True}
+
 # Register all routers under /api/v1
 _prefix = "/api/v1"
 app.include_router(auth.router,      prefix=_prefix)

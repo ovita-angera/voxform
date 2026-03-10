@@ -52,8 +52,11 @@ async function tryRefresh() {
 }
 
 async function toError(res: Response) {
-  try { const b = await res.json(); return new Error(b.message ?? `HTTP ${res.status}`) }
-  catch { return new Error(`HTTP ${res.status}`) }
+  try {
+    const b = await res.json()
+    const msg = b.detail?.message ?? b.detail ?? b.message ?? `HTTP ${res.status}`
+    return new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+  } catch { return new Error(`HTTP ${res.status}`) }
 }
 
 export const api = {

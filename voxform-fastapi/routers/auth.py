@@ -43,14 +43,15 @@ async def _issue_tokens(response: Response, db: Database, user: dict) -> str:
         {"id": new_id(), "uid": user["id"], "h": hashed, "exp": expires},
     )
 
+    is_prod = config.APP_URL.startswith("https://")
     response.set_cookie(
         key="vf_refresh",
         value=plain,
         httponly=True,
-        samesite="lax",
+        samesite="none" if is_prod else "lax",
         path="/api/v1/auth",
         max_age=_REFRESH_TTL,
-        secure=False,
+        secure=is_prod,
     )
     return access
 

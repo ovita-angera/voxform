@@ -16,7 +16,7 @@ export function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
       {/* Header */}
       <div className="flex items-start justify-between mb-10">
         <div>
@@ -27,7 +27,7 @@ export function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-px bg-warm border border-warm mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-warm border border-warm mb-8">
         {[
           { label: 'Surveys', value: surveys.length, sub: 'total' },
           { label: 'Plan', value: user?.org?.plan ?? '—', sub: 'current tier' },
@@ -36,7 +36,7 @@ export function DashboardPage() {
           <div key={label} className="bg-paper px-6 py-5">
             <p className="text-[11px] font-mono text-dim uppercase tracking-widest mb-2">{label}</p>
             <p className={`font-serif text-ink leading-none ${sm ? 'text-[20px]' : 'text-[28px]'}`}>{value}</p>
-            <p className="text-[11px] text-ghost mt-1 font-mono">{sub}</p>
+            <p className="text-[11px] text-dim mt-1 font-mono">{sub}</p>
           </div>
         ))}
       </div>
@@ -70,7 +70,7 @@ export function DashboardPage() {
                   <p className="text-[12px] text-dim font-mono mt-0.5">{s.responseCount ?? 0} responses</p>
                 </div>
                 <StatusDot status={s.status} />
-                <span className="text-ghost text-[12px]">›</span>
+                <span className="text-dim text-[12px]">›</span>
               </Link>
             ))}
           </div>

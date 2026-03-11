@@ -49,7 +49,7 @@ export function LoginPage() {
       </form>
 
       <div className="border-t border-warm pt-5 space-y-2">
-        <p className="text-[11px] font-mono text-ghost uppercase tracking-widest">Demo credentials</p>
+        <p className="text-[11px] font-mono text-dim uppercase tracking-widest">Demo credentials</p>
         {[['admin@nri.ac.ke', 'voxform123'], ['surveyor@nri.ac.ke', 'voxform123']].map(([e, p]) => (
           <button key={e} onClick={() => { setEmail(e); setPassword(p) }}
             className="w-full text-left px-3 py-2 border border-warm hover:border-ink transition-colors group">

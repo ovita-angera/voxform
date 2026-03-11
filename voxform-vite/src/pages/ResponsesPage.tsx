@@ -43,7 +43,7 @@ function sessionBadgeColor(status: string): 'green' | 'amber' | 'red' | 'warm' {
 
 // ── Compact cell renderers ─────────────────────────────────────────────────────
 function CellValue({ r, q }: { r: ResponseRow | undefined; q: Question }) {
-  if (!r) return <span className="text-ghost">—</span>
+  if (!r) return <span className="text-dim">—</span>
 
   if (AUDIO_TYPES.has(r.type)) {
     const src = audioSrc(r.audio_wav_url || r.audio_url)
@@ -57,7 +57,7 @@ function CellValue({ r, q }: { r: ResponseRow | undefined; q: Question }) {
     )
   }
 
-  if (!r.text_value) return <span className="text-ghost">—</span>
+  if (!r.text_value) return <span className="text-dim">—</span>
 
   if (r.type === 'STAR_RATING') {
     const n = Number(r.text_value) || 0
@@ -154,12 +154,12 @@ function SessionDetail({
           const r = answerMap[q.id]
           if (!r) return (
             <div key={q.id} className="flex gap-4 items-start">
-              <span className="text-[10px] font-mono text-ghost w-5 mt-0.5 shrink-0 text-right">
+              <span className="text-[10px] font-mono text-dim w-5 mt-0.5 shrink-0 text-right">
                 {idx + 1}
               </span>
               <div className="min-w-0">
                 <p className="text-[12px] text-dim mb-1">{q.title}</p>
-                <p className="text-[13px] text-ghost italic">No response</p>
+                <p className="text-[13px] text-dim italic">No response</p>
               </div>
             </div>
           )
@@ -178,7 +178,7 @@ function SessionDetail({
 
           return (
             <div key={q.id} className="flex gap-4 items-start">
-              <span className="text-[10px] font-mono text-ghost w-5 mt-0.5 shrink-0 text-right">
+              <span className="text-[10px] font-mono text-dim w-5 mt-0.5 shrink-0 text-right">
                 {idx + 1}
               </span>
               <div className="flex-1 min-w-0">
@@ -197,7 +197,7 @@ function SessionDetail({
                   <div className="space-y-2.5">
                     {src
                       ? <MiniAudioPlayer src={src} />
-                      : <p className="text-[12px] font-mono text-ghost">Audio pending processing…</p>
+                      : <p className="text-[12px] font-mono text-dim">Audio pending processing…</p>
                     }
                     {r.audio_duration_sec != null && (
                       <p className="text-[11px] font-mono text-dim">
@@ -367,7 +367,7 @@ export function ResponsesPage() {
   const tableQuestions = sortedQuestions.slice(0, TABLE_Q_LIMIT)
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
@@ -460,7 +460,7 @@ export function ResponsesPage() {
                           </td>
                         ))}
                         {sortedQuestions.length > TABLE_Q_LIMIT && (
-                          <td className="px-4 py-3 text-[11px] font-mono text-ghost">
+                          <td className="px-4 py-3 text-[11px] font-mono text-dim">
                             {sessResponses.length}/{sortedQuestions.length}
                           </td>
                         )}

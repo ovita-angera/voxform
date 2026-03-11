@@ -6,7 +6,7 @@ import {
   CalendarDays, Phone, ToggleLeft, CheckSquare, ChevronDown,
   Grid3X3, Upload, AlignJustify, Star, FileText, LayoutTemplate,
   Copy, ExternalLink, QrCode, Trash2, ChevronRight, Plus,
-  Check, Loader2, Search, X, ChevronLeft, ChevronUp, Play, Pause,
+  Check, Loader2, Search, X, ChevronLeft, ChevronUp, Play, Pause, List,
 } from 'lucide-react'
 import { api } from '@/lib/api/client'
 import { StatusDot } from '@/components/ui'
@@ -103,6 +103,7 @@ export function SurveyBuilderPage() {
   const [typeSearch, setTypeSearch] = useState('')
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [copied, setCopied] = useState(false)
+  const [showList, setShowList] = useState(false)
 
   const qSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const titleSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -224,6 +225,17 @@ export function SurveyBuilderPage() {
         >
           <ChevronLeft size={16} />
         </Link>
+        <button
+          type="button"
+          onClick={() => setShowList(s => !s)}
+          title="Toggle questions"
+          className={cn(
+            'md:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-all',
+            showList ? 'bg-violet/10 text-violet' : 'text-dim hover:text-ink hover:bg-warm',
+          )}
+        >
+          <List size={15} />
+        </button>
         <div className="w-px h-5 bg-warm" />
         <input
           className="flex-1 min-w-0 bg-transparent border-none outline-none text-[14px] font-medium text-ink placeholder:text-ghost font-sans"
@@ -279,7 +291,10 @@ export function SurveyBuilderPage() {
         <TabsContent value="create" className="flex flex-1 overflow-hidden m-0">
 
           {/* ── Left: Question list ────────────────────────────────────────── */}
-          <aside className="w-[220px] shrink-0 border-r border-warm flex flex-col overflow-hidden bg-paper">
+          <aside className={cn(
+            'shrink-0 border-r border-warm flex-col overflow-hidden bg-paper w-[220px]',
+            showList ? 'flex' : 'hidden md:flex',
+          )}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-warm">
               <span className="text-[11px] font-mono text-dim uppercase tracking-widest">Questions</span>
               <span className="text-[10px] font-mono bg-warm/80 text-dim px-1.5 py-0.5 rounded">
@@ -289,7 +304,7 @@ export function SurveyBuilderPage() {
 
             <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
               {questions.length === 0 && !pickingType && (
-                <p className="text-[11px] font-mono text-ghost text-center py-8 px-3">
+                <p className="text-[11px] font-mono text-dim text-center py-8 px-3">
                   No questions yet
                 </p>
               )}
@@ -317,7 +332,7 @@ export function SurveyBuilderPage() {
                       {q.type === 'DESCRIPTION_SLIDE' ? '—' : i + 1}
                     </span>
                     {Icon && (
-                      <Icon size={12} className={cn('shrink-0', isActive ? 'text-violet' : 'text-ghost')} />
+                      <Icon size={12} className={cn('shrink-0', isActive ? 'text-violet' : 'text-dim')} />
                     )}
                     <span className={cn('text-[12px] truncate flex-1 leading-tight', isActive && 'font-medium')}>
                       {q.title}
@@ -330,7 +345,7 @@ export function SurveyBuilderPage() {
                         e.stopPropagation()
                         if (confirm('Delete this question?')) deleteQ.mutate(q.id)
                       }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-ghost hover:text-red-500 shrink-0"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-dim hover:text-red-500 shrink-0"
                     >
                       <Trash2 size={11} />
                     </button>
@@ -359,7 +374,7 @@ export function SurveyBuilderPage() {
           </aside>
 
           {/* ── Canvas ─────────────────────────────────────────────────────── */}
-          <div className="flex-1 overflow-auto bg-warm/10">
+          <div className={cn('flex-1 overflow-auto bg-warm/10', showList && 'hidden md:block')}>
             {pickingType ? (
               /* ── Type picker view ─────────────────────────────────────── */
               <div className="max-w-[800px] mx-auto px-6 py-8">
@@ -380,7 +395,7 @@ export function SurveyBuilderPage() {
 
                 {/* Search */}
                 <div className="relative mb-7">
-                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ghost pointer-events-none" />
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim pointer-events-none" />
                   <input
                     className="w-full h-10 pl-9 pr-9 bg-paper border border-warm rounded-xl text-[13px] text-ink placeholder:text-ghost focus:outline-none focus:border-violet transition-colors"
                     placeholder="Search question types…"
@@ -391,7 +406,7 @@ export function SurveyBuilderPage() {
                   {typeSearch && (
                     <button
                       onClick={() => setTypeSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ghost hover:text-ink transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-dim hover:text-ink transition-colors"
                     >
                       <X size={13} />
                     </button>
@@ -428,7 +443,7 @@ export function SurveyBuilderPage() {
                                 <p className="text-[13px] font-medium text-ink group-hover:text-violet transition-colors leading-tight">
                                   {t.label}
                                 </p>
-                                <p className="text-[11px] text-ghost mt-0.5 leading-tight">{t.desc}</p>
+                                <p className="text-[11px] text-dim mt-0.5 leading-tight">{t.desc}</p>
                               </div>
                             </button>
                           )
@@ -511,7 +526,7 @@ export function SurveyBuilderPage() {
                   >
                     <ChevronLeft size={13} /> Prev
                   </button>
-                  <span className="text-[11px] font-mono text-ghost">
+                  <span className="text-[11px] font-mono text-dim">
                     {selectedIdx + 1} / {questions.length}
                   </span>
                   <button
@@ -547,7 +562,7 @@ export function SurveyBuilderPage() {
 
           {/* ── Right: Properties panel ───────────────────────────────────── */}
           {editingQ && !pickingType && (
-            <aside className="w-[260px] shrink-0 border-l border-warm overflow-y-auto bg-paper">
+            <aside className="hidden md:flex md:flex-col w-[260px] shrink-0 border-l border-warm overflow-y-auto bg-paper">
               <div className="px-4 py-3 border-b border-warm">
                 <span className="text-[11px] font-mono text-dim uppercase tracking-widest">Settings</span>
               </div>
@@ -647,13 +662,13 @@ export function SurveyBuilderPage() {
                     <div className="w-28 h-28 rounded-xl border border-warm flex items-center justify-center bg-warm/20">
                       <QrCode size={48} className="text-dim opacity-40" />
                     </div>
-                    <p className="text-[11px] font-mono text-ghost text-center">QR code generation available in Pro plan</p>
+                    <p className="text-[11px] font-mono text-dim text-center">QR code generation available in Pro plan</p>
                   </div>
                 </div>
               </>
             ) : (
               <div className="rounded-xl border border-warm/60 px-5 py-8 text-center">
-                <p className="font-serif text-[18px] text-ghost mb-1">Survey is not active</p>
+                <p className="font-serif text-[18px] text-dim mb-1">Survey is not active</p>
                 <p className="text-[13px] text-dim">Publish the survey first to access sharing options.</p>
               </div>
             )}
@@ -703,7 +718,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
               />
               <button
                 onClick={() => setOpts({ choices: choices.filter((_, j) => j !== i) })}
-                className="p-1.5 text-ghost hover:text-red-400 rounded transition-colors"
+                className="p-1.5 text-dim hover:text-red-400 rounded transition-colors"
               >
                 <Trash2 size={12} />
               </button>
@@ -755,7 +770,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
             <input type="number" className={cn(fieldCls, 'w-16 text-center')}
               value={opts?.min ?? 1} min={1} max={5}
               onChange={e => setOpts({ min: Number(e.target.value) })} />
-            <span className="text-ghost">to</span>
+            <span className="text-dim">to</span>
             <input type="number" className={cn(fieldCls, 'w-16 text-center')}
               value={opts?.max ?? 5} min={2} max={10}
               onChange={e => setOpts({ max: Number(e.target.value) })} />
@@ -791,7 +806,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
           <label className={labelCls}>Range</label>
           <div className="flex gap-2 items-center">
             <input type="number" className={cn(fieldCls, 'flex-1')} placeholder="Min" value={opts?.min ?? ''} onChange={e => setOpts({ min: Number(e.target.value) })} />
-            <span className="text-ghost text-[13px]">–</span>
+            <span className="text-dim text-[13px]">–</span>
             <input type="number" className={cn(fieldCls, 'flex-1')} placeholder="Max" value={opts?.max ?? ''} onChange={e => setOpts({ max: Number(e.target.value) })} />
           </div>
         </div>
@@ -827,14 +842,14 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
           <input type="number" className={fieldCls}
             value={opts?.minDbfs ?? -18} min={-60} max={0}
             onChange={e => setOpts({ minDbfs: Number(e.target.value) })} />
-          <p className="text-[10px] text-ghost mt-1">How loud the recording must be. −18 is a good default; lower = more lenient.</p>
+          <p className="text-[10px] text-dim mt-1">How loud the recording must be. −18 is a good default; lower = more lenient.</p>
         </div>
         <div>
           <label className={labelCls}>Min signal-to-noise ratio (dB)</label>
           <input type="number" className={fieldCls}
             value={opts?.minSnrDb ?? 15} min={0} max={60}
             onChange={e => setOpts({ minSnrDb: Number(e.target.value) })} />
-          <p className="text-[10px] text-ghost mt-1">How clean the recording must be. 15 dB is a good default; lower = more lenient.</p>
+          <p className="text-[10px] text-dim mt-1">How clean the recording must be. 15 dB is a good default; lower = more lenient.</p>
         </div>
       </div>
     )
@@ -854,7 +869,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
               <div key={i} className="flex gap-2">
                 <input className={cn(fieldCls, 'flex-1')} value={r}
                   onChange={e => { const u = [...rows]; u[i] = e.target.value; setOpts({ rows: u }) }} />
-                <button onClick={() => setOpts({ rows: rows.filter((_, j) => j !== i) })} className="p-1.5 text-ghost hover:text-red-400 rounded transition-colors"><Trash2 size={12} /></button>
+                <button onClick={() => setOpts({ rows: rows.filter((_, j) => j !== i) })} className="p-1.5 text-dim hover:text-red-400 rounded transition-colors"><Trash2 size={12} /></button>
               </div>
             ))}
             <button onClick={() => setOpts({ rows: [...rows, `Row ${rows.length + 1}`] })}
@@ -870,7 +885,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
               <div key={i} className="flex gap-2">
                 <input className={cn(fieldCls, 'flex-1')} value={c}
                   onChange={e => { const u = [...cols]; u[i] = e.target.value; setOpts({ columns: u }) }} />
-                <button onClick={() => setOpts({ columns: cols.filter((_, j) => j !== i) })} className="p-1.5 text-ghost hover:text-red-400 rounded transition-colors"><Trash2 size={12} /></button>
+                <button onClick={() => setOpts({ columns: cols.filter((_, j) => j !== i) })} className="p-1.5 text-dim hover:text-red-400 rounded transition-colors"><Trash2 size={12} /></button>
               </div>
             ))}
             <button onClick={() => setOpts({ columns: [...cols, `Column ${cols.length + 1}`] })}
@@ -908,7 +923,7 @@ function QuestionPreview({ q }: { q: Question }) {
   if (q.type === 'DESCRIPTION_SLIDE') return (
     <div className="flex items-center gap-4 my-2">
       <hr className="flex-1 border-warm" />
-      <span className="text-[11px] font-mono text-ghost uppercase tracking-widest">{q.title}</span>
+      <span className="text-[11px] font-mono text-dim uppercase tracking-widest">{q.title}</span>
       <hr className="flex-1 border-warm" />
     </div>
   )
@@ -922,7 +937,7 @@ function QuestionPreview({ q }: { q: Question }) {
           <span key={b} className="text-[10px] font-mono border border-warm px-2 py-1 rounded-full text-dim bg-paper">{b}</span>
         ))}
       </div>
-      <p className="text-[12px] font-mono text-ghost">Tap to record</p>
+      <p className="text-[12px] font-mono text-dim">Tap to record</p>
     </div>
   )
   if (q.type === 'SINGLE_CHOICE' || q.type === 'MULTIPLE_CHOICE' || q.type === 'DROPDOWN') {
@@ -934,7 +949,7 @@ function QuestionPreview({ q }: { q: Question }) {
     if (q.type === 'DROPDOWN') return (
       <div className="flex items-center justify-between h-11 border border-warm rounded-lg px-4 text-[14px] text-dim bg-warm/10">
         <span>Select an option…</span>
-        <ChevronDown size={14} className="text-ghost" />
+        <ChevronDown size={14} className="text-dim" />
       </div>
     )
     return (
@@ -967,7 +982,7 @@ function QuestionPreview({ q }: { q: Question }) {
             <div key={v} className="flex-1 h-11 border border-warm rounded-lg flex items-center justify-center font-mono text-[13px] text-dim hover:border-ink cursor-pointer transition-colors">{v}</div>
           ))}
         </div>
-        <div className="flex justify-between text-[11px] font-mono text-ghost">
+        <div className="flex justify-between text-[11px] font-mono text-dim">
           <span>{opts.minLabel}</span><span>{opts.maxLabel}</span>
         </div>
       </div>
@@ -1018,21 +1033,21 @@ function QuestionPreview({ q }: { q: Question }) {
       <div className="border-2 border-dashed border-warm rounded-xl p-8 flex flex-col items-center gap-2 bg-warm/5">
         <Upload size={24} className="text-dim opacity-40" />
         <p className="text-[13px] text-dim">Drag & drop or click to upload</p>
-        <p className="text-[11px] font-mono text-ghost">{opts?.accept ?? 'Any file'} · Max {opts?.maxMB ?? 10}MB</p>
+        <p className="text-[11px] font-mono text-dim">{opts?.accept ?? 'Any file'} · Max {opts?.maxMB ?? 10}MB</p>
       </div>
     )
   }
   if (q.type === 'NAME') return (
     <div className="flex gap-3">
-      <div className="flex-1 h-11 border border-warm rounded-lg flex items-center px-4 text-ghost text-[13px] font-mono">First name</div>
-      <div className="flex-1 h-11 border border-warm rounded-lg flex items-center px-4 text-ghost text-[13px] font-mono">Last name</div>
+      <div className="flex-1 h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px] font-mono">First name</div>
+      <div className="flex-1 h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px] font-mono">Last name</div>
     </div>
   )
   if (q.type === 'NUMERIC') {
     const unit = (q.options as { unit?: string })?.unit
     return (
       <div className="flex items-center h-11 border border-warm rounded-lg overflow-hidden">
-        <input className="flex-1 h-full px-4 bg-transparent text-ghost text-[13px] font-mono outline-none" placeholder="0" readOnly />
+        <input className="flex-1 h-full px-4 bg-transparent text-dim text-[13px] font-mono outline-none" placeholder="0" readOnly />
         {unit && <span className="px-3 h-full flex items-center border-l border-warm text-[12px] font-mono text-dim bg-warm/20">{unit}</span>}
       </div>
     )
@@ -1040,11 +1055,11 @@ function QuestionPreview({ q }: { q: Question }) {
   if (q.type === 'VIDEO_CAPTURE') return (
     <div className="flex flex-col items-center gap-3 py-8 rounded-xl border border-warm bg-warm/10">
       <div className="w-14 h-14 rounded-xl border border-warm bg-paper flex items-center justify-center text-dim shadow-sm"><Video size={24} /></div>
-      <p className="text-[12px] font-mono text-ghost">Tap to record video</p>
+      <p className="text-[12px] font-mono text-dim">Tap to record video</p>
     </div>
   )
   return (
-    <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-ghost text-[13px] font-mono">
+    <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px] font-mono">
       {q.type.replace(/_/g, ' ').toLowerCase()}
     </div>
   )
@@ -1153,7 +1168,7 @@ function SurveyResponses({ surveyId }: { surveyId: string; surveySlug: string })
         </div>
       ) : sessions.length === 0 ? (
         <div className="rounded-xl border border-warm px-5 py-12 text-center">
-          <p className="font-serif text-[18px] text-ghost mb-1">No responses yet</p>
+          <p className="font-serif text-[18px] text-dim mb-1">No responses yet</p>
           <p className="text-[13px] text-dim">Responses appear here once your survey is submitted.</p>
         </div>
       ) : (
@@ -1227,16 +1242,16 @@ function SurveyResponses({ surveyId }: { surveyId: string; surveySlug: string })
 
                               return (
                                 <div key={q.id} className="flex gap-4 items-start">
-                                  <span className="text-[10px] font-mono text-ghost w-5 shrink-0 text-right mt-0.5">{qi + 1}</span>
+                                  <span className="text-[10px] font-mono text-dim w-5 shrink-0 text-right mt-0.5">{qi + 1}</span>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-[12px] text-dim mb-1.5">{q.title}</p>
                                     {!r ? (
-                                      <p className="text-[13px] text-ghost italic">No response</p>
+                                      <p className="text-[13px] text-dim italic">No response</p>
                                     ) : isAudio ? (
                                       <div className="space-y-2">
                                         {audioSrcUrl
                                           ? <InlineMiniPlayer src={audioSrcUrl} />
-                                          : <p className="text-[12px] font-mono text-ghost">Audio pending processing…</p>
+                                          : <p className="text-[12px] font-mono text-dim">Audio pending processing…</p>
                                         }
                                         {r.audio_duration_sec != null && (
                                           <p className="text-[11px] font-mono text-dim">

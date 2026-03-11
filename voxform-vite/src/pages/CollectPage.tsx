@@ -197,7 +197,7 @@ function IntroScreen({ survey, onStart }: { survey: Survey; onStart: () => void 
           ].map(([v, l]) => (
             <div key={l} className="border-l-2 border-warm pl-3">
               <p className="font-serif text-[16px] font-semibold text-ink">{v}</p>
-              <p className="font-mono text-[11px] text-ghost">{l}</p>
+              <p className="font-mono text-[11px] text-dim">{l}</p>
             </div>
           ))}
         </div>
@@ -210,7 +210,7 @@ function IntroScreen({ survey, onStart }: { survey: Survey; onStart: () => void 
         >
           Begin survey →
         </button>
-        <p className="text-center mt-3 font-mono text-[11px] text-ghost">Your responses are recorded securely</p>
+        <p className="text-center mt-3 font-mono text-[11px] text-dim">Your responses are recorded securely</p>
       </div>
     </div>
   )
@@ -250,7 +250,7 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
       <div className="flex-1 p-8 pt-8">
         <p className="font-mono text-[11px] text-dim tracking-[0.1em] mb-5 uppercase">
           {String(index).padStart(2, '0')} — {question.type.replace(/_/g, ' ')}
-          {!!question.required && <span className="ml-1.5 text-ghost">*</span>}
+          {!!question.required && <span className="ml-1.5 text-dim">*</span>}
         </p>
         <h2 className="font-serif text-[clamp(22px,5vw,28px)] leading-[1.2] tracking-tight text-ink mb-2">
           {question.title}
@@ -274,10 +274,10 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
           {submitting ? 'Submitting…' : isLast ? 'Submit' : 'Next →'}
         </button>
         {!!question.required && !canProceed && !submitting && (
-          <p className="text-center mt-2 font-mono text-[11px] text-ghost">Required · press Enter when ready</p>
+          <p className="text-center mt-2 font-mono text-[11px] text-dim">Required · press Enter when ready</p>
         )}
         {canProceed && !submitting && (
-          <p className="text-center mt-2 font-mono text-[11px] text-ghost/70">press Enter ↵</p>
+          <p className="text-center mt-2 font-mono text-[11px] text-dim/60">press Enter ↵</p>
         )}
       </div>
     </div>
@@ -333,7 +333,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
               ${value === c.id ? 'border-paper' : 'border-ghost'}`}>
               {value === c.id
                 ? <div className="w-2.5 h-2.5 rounded-full bg-paper" />
-                : <span className="font-mono text-[10px] text-ghost">{i + 1}</span>
+                : <span className="font-mono text-[10px] text-dim">{i + 1}</span>
               }
             </div>
             <span className={`text-[15px] transition-colors ${value === c.id ? 'text-paper' : 'text-ink'}`}>{c.label}</span>
@@ -360,7 +360,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
                 ${on ? 'border-paper bg-paper' : 'border-ghost'}`}>
                 {on
                   ? <span className="text-ink text-[10px] font-bold leading-none">✓</span>
-                  : <span className="font-mono text-[10px] text-ghost">{i + 1}</span>
+                  : <span className="font-mono text-[10px] text-dim">{i + 1}</span>
                 }
               </div>
               <span className={`text-[15px] transition-colors ${on ? 'text-paper' : 'text-ink'}`}>{c.label}</span>
@@ -385,7 +385,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
                 ? 'bg-ink text-paper border-ink shadow-sm'
                 : 'bg-paper text-ink border-warm hover:border-ink hover:shadow-sm'}`}>
             <span className="text-[16px] font-medium">{o.label}</span>
-            <span className={`absolute top-2 right-3 font-mono text-[10px] ${value === o.val ? 'text-paper/50' : 'text-ghost'}`}>
+            <span className={`absolute top-2 right-3 font-mono text-[10px] ${value === o.val ? 'text-paper/50' : 'text-dim'}`}>
               {o.hint}
             </span>
           </button>
@@ -410,7 +410,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
           ))}
         </div>
         {(opts.minLabel ?? opts.maxLabel) && (
-          <div className="flex justify-between mt-2 font-mono text-[11px] text-ghost">
+          <div className="flex justify-between mt-2 font-mono text-[11px] text-dim">
             <span>{opts.minLabel}</span><span>{opts.maxLabel}</span>
           </div>
         )}
@@ -432,7 +432,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
             </button>
           ))}
         </div>
-        <div className="flex justify-between mt-2 font-mono text-[11px] text-ghost">
+        <div className="flex justify-between mt-2 font-mono text-[11px] text-dim">
           <span>Not likely</span><span>Very likely</span>
         </div>
       </div>
@@ -674,7 +674,7 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
           <p className="font-mono text-[11px] text-violet">Min duration reached — tap stop when ready</p>
         )}
         {state === 'idle' && (
-          <p className="font-mono text-[11px] text-ghost">Tap to record · Min {minDuration}s · Max {Math.floor(maxDuration / 60)}min</p>
+          <p className="font-mono text-[11px] text-dim">Tap to record · Min {minDuration}s · Max {Math.floor(maxDuration / 60)}min</p>
         )}
         {state === 'done' && duration < minDuration && (
           <p className="font-mono text-[11px] text-amber-600">Too short ({duration}s) — please re-record (min {minDuration}s)</p>
@@ -748,7 +748,7 @@ function DoneScreen({ survey }: { survey: Survey }) {
           Your responses have been recorded. You can now close this window.
         </p>
       </div>
-      <p className="font-mono text-[11px] text-ghost mt-4">{survey.title}</p>
+      <p className="font-mono text-[11px] text-dim mt-4">{survey.title}</p>
     </div>
   )
 }

@@ -27,7 +27,7 @@ export function SurveysPage() {
   })
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-serif text-[32px] tracking-tight text-ink">Surveys</h1>
@@ -37,14 +37,14 @@ export function SurveysPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
         <input
           className="flex-1 h-9 px-4 border border-warm bg-paper text-[13px] text-ink placeholder:text-ghost focus:outline-none focus:border-ink font-mono transition-colors"
           placeholder="Search surveys…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <div className="flex border border-warm">
+        <div className="flex border border-warm overflow-x-auto shrink-0">
           {STATUSES.map(s => (
             <button key={s} onClick={() => setStatus(s)}
               className={`px-3 h-9 text-[11px] font-mono uppercase tracking-wide transition-colors border-r border-warm last:border-r-0
@@ -56,7 +56,7 @@ export function SurveysPage() {
       </div>
 
       {/* Table */}
-      <div className="border border-warm">
+      <div className="border border-warm overflow-x-auto">
         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-px bg-warm border-b border-warm">
           {['Survey', 'Status', 'Responses', ''].map(h => (
             <div key={h} className="bg-paper px-4 py-2.5 text-[11px] font-mono text-dim uppercase tracking-widest">{h}</div>

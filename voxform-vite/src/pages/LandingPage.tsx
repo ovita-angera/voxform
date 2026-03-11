@@ -60,7 +60,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-paper text-ink font-sans">
       {/* ── Nav ── */}
-      <nav className="h-16 flex items-center justify-between px-8 border-b border-warm/60">
+      <nav className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-warm/60">
         <span className="font-serif text-[20px] tracking-tight text-ink">voxform</span>
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-[13px] text-dim hover:text-ink font-mono transition-colors">Sign in</Link>
@@ -71,7 +71,7 @@ export function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="max-w-4xl mx-auto px-8 pt-24 pb-20 text-center">
+      <section className="max-w-4xl mx-auto px-4 sm:px-8 pt-16 sm:pt-24 pb-14 sm:pb-20 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 border border-violet/30 bg-violet/5 text-[11px] font-mono text-violet uppercase tracking-widest mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-violet" />
           Audio-native survey platform
@@ -101,7 +101,7 @@ export function LandingPage() {
           ].map(([val, lbl]) => (
             <div key={lbl} className="bg-paper px-5 py-4 text-center">
               <p className="font-serif text-[22px] text-ink">{val}</p>
-              <p className="font-mono text-[10px] text-ghost uppercase tracking-wider mt-0.5">{lbl}</p>
+              <p className="font-mono text-[10px] text-dim uppercase tracking-wider mt-0.5">{lbl}</p>
             </div>
           ))}
         </div>
@@ -109,7 +109,7 @@ export function LandingPage() {
 
       {/* ── Features ── */}
       <section className="border-t border-warm">
-        <div className="max-w-5xl mx-auto px-8 py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-14 sm:py-20">
           <div className="text-center mb-14">
             <p className="font-mono text-[11px] text-dim uppercase tracking-widest mb-3">Why Voxform</p>
             <h2 className="font-serif text-[36px] tracking-tight text-ink">Built for serious field research</h2>
@@ -133,7 +133,7 @@ export function LandingPage() {
 
       {/* ── Question types showcase ── */}
       <section className="border-t border-warm bg-warm/20">
-        <div className="max-w-5xl mx-auto px-8 py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-14 sm:py-20">
           <div className="text-center mb-12">
             <p className="font-mono text-[11px] text-dim uppercase tracking-widest mb-3">Question types</p>
             <h2 className="font-serif text-[36px] tracking-tight text-ink">Every data collection need covered</h2>
@@ -154,7 +154,7 @@ export function LandingPage() {
 
       {/* ── CTA strip ── */}
       <section className="border-t border-warm bg-ink text-paper">
-        <div className="max-w-2xl mx-auto px-8 py-16 text-center space-y-6">
+        <div className="max-w-2xl mx-auto px-4 sm:px-8 py-12 sm:py-16 text-center space-y-6">
           <h2 className="font-serif text-[36px] tracking-tight leading-tight">
             Ready to capture better data?
           </h2>
@@ -168,9 +168,9 @@ export function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-warm/30 px-8 py-6 flex items-center justify-between">
+      <footer className="border-t border-warm/30 px-4 sm:px-8 py-6 flex items-center justify-between">
         <span className="font-serif text-[15px] text-dim">voxform</span>
-        <p className="font-mono text-[11px] text-ghost">© {new Date().getFullYear()} Voxform. Audio-native surveys.</p>
+        <p className="font-mono text-[11px] text-dim">© {new Date().getFullYear()} Voxform. Audio-native surveys.</p>
       </footer>
     </div>
   )

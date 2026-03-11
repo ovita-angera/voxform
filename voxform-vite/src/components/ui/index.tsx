@@ -71,7 +71,7 @@ export function Divider({ label }: { label?: string }) {
   return (
     <div className="flex items-center gap-4">
       <hr className="flex-1 border-warm" />
-      <span className="text-[11px] text-ghost font-mono uppercase tracking-widest">{label}</span>
+      <span className="text-[11px] text-dim font-mono uppercase tracking-widest">{label}</span>
       <hr className="flex-1 border-warm" />
     </div>
   )

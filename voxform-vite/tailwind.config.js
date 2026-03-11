@@ -16,7 +16,7 @@ export default {
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],
-        sans:  ['"Instrument Sans"', 'system-ui', 'sans-serif'],
+        sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
         mono:  ['"JetBrains Mono"', 'monospace'],
       },
     },

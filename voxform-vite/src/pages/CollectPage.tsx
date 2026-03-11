@@ -457,6 +457,7 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
     <AudioWidget
       minDuration={(q.options as { minDurationSec?: number })?.minDurationSec ?? 15}
       maxDuration={(q.options as { maxDurationSec?: number })?.maxDurationSec ?? 300}
+      minDbfs={(q.options as { minDbfs?: number })?.minDbfs ?? -18}
       value={value as AudioValue | null}
       onChange={onChange}
     />
@@ -481,8 +482,8 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
 }
 
 // ── Audio widget ───────────────────────────────────────────────────────────────
-function AudioWidget({ minDuration, maxDuration, value, onChange }: {
-  minDuration: number; maxDuration: number; value: AudioValue | null; onChange: (v: unknown) => void
+function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange }: {
+  minDuration: number; maxDuration: number; minDbfs?: number; value: AudioValue | null; onChange: (v: unknown) => void
 }) {
   const [state, setState] = useState<'idle' | 'recording' | 'done'>(value ? 'done' : 'idle')
   const [duration, setDuration] = useState(value?.duration ?? 0)
@@ -593,13 +594,13 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
 
   const meetsMin = duration >= minDuration
 
-  const sigTier = liveDbfs > -18 ? 'good' : liveDbfs > -30 ? 'ok' : 'poor'
+  const sigTier = liveDbfs > minDbfs ? 'good' : liveDbfs > (minDbfs - 12) ? 'ok' : 'poor'
   const sigBarColor = sigTier === 'good' ? 'bg-emerald-400' : sigTier === 'ok' ? 'bg-amber-400' : 'bg-red-400'
   const sigTextColor = sigTier === 'good' ? 'text-emerald-600' : sigTier === 'ok' ? 'text-amber-600' : 'text-red-500'
   const sigBarWidth = `${Math.max(3, ((liveDbfs + 60) / 60) * 100)}%`
 
-  const sumTier = qcSummary ? (qcSummary.avgDbfs > -18 ? 'good' : qcSummary.avgDbfs > -30 ? 'ok' : 'poor') : null
-  const sumLabel = sumTier === 'good' ? 'Good' : sumTier === 'ok' ? 'Marginal' : 'Weak'
+  const sumTier = qcSummary ? (qcSummary.avgDbfs > minDbfs ? 'good' : qcSummary.avgDbfs > (minDbfs - 12) ? 'ok' : 'poor') : null
+  const sumLabel = sumTier === 'good' ? 'Sounds great' : sumTier === 'ok' ? 'Sounds okay' : 'Sounds too quiet'
   const sumColor = sumTier === 'good' ? 'text-emerald-600' : sumTier === 'ok' ? 'text-amber-600' : 'text-red-500'
 
   return (
@@ -623,7 +624,7 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-dim tracking-widest uppercase">Signal</span>
             <span className={`font-mono text-[11px] font-medium ${sigTextColor}`}>
-              {Math.round(liveDbfs)} dBFS · {sigTier === 'good' ? 'Good' : sigTier === 'ok' ? 'Marginal' : 'Weak'}
+              {sigTier === 'good' ? 'Clear' : sigTier === 'ok' ? 'Acceptable' : 'Too quiet'}
             </span>
           </div>
           <div className="w-full h-1.5 rounded-full bg-warm overflow-hidden">
@@ -661,8 +662,7 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
 
       {state === 'done' && qcSummary && (
         <p className={`font-mono text-[11px] ${sumColor}`}>
-          Signal: {sumLabel} · avg {qcSummary.avgDbfs} dBFS
-          {sumTier === 'poor' && ' — consider re-recording in a quieter space'}
+          {sumLabel}{sumTier === 'poor' ? ' — try speaking louder or moving to a quieter spot' : ''}
         </p>
       )}
 

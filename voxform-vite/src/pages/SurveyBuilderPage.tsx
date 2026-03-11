@@ -568,8 +568,8 @@ export function SurveyBuilderPage() {
                     )}
                   >
                     <span className={cn(
-                      'absolute top-[3px] w-[18px] h-[18px] rounded-full shadow-sm transition-all duration-200',
-                      editingQ.required ? 'right-[3px] bg-white' : 'left-[3px] bg-ghost',
+                      'absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full shadow-sm transition-all duration-200',
+                      editingQ.required ? 'right-[2px] bg-white' : 'left-[2px] bg-ghost',
                     )} />
                   </button>
                 </div>
@@ -804,7 +804,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
   }
 
   if (q.type === 'VOICE_RESPONSE' || q.type === 'AUDIO_CAPTURE' || q.type === 'AUDIO_QUESTION') {
-    const opts = q.options as { minDurationSec?: number; maxDurationSec?: number } | undefined
+    const opts = q.options as { minDurationSec?: number; maxDurationSec?: number; minDbfs?: number; minSnrDb?: number } | undefined
     return (
       <div className="space-y-4">
         <div className="h-px bg-warm" />
@@ -820,21 +820,21 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
             value={opts?.maxDurationSec ?? 300} min={30}
             onChange={e => setOpts({ maxDurationSec: Number(e.target.value) })} />
         </div>
-        <div className="rounded-lg border border-warm/50 px-3 py-3 bg-warm/20 space-y-2">
-          <p className="text-[10px] font-mono text-dim uppercase tracking-widest mb-1">Quality thresholds</p>
-          {[
-            ['SNR', '> 15 dB', 'Good signal-to-noise ratio'],
-            ['dBFS', '> −18 dBFS', 'Acceptable recording level'],
-            ['Freq', '> 300 Hz', 'Minimum frequency response'],
-          ].map(([key, val, desc]) => (
-            <div key={key} className="flex items-start gap-2">
-              <span className="font-mono text-[10px] text-violet w-8 shrink-0 mt-0.5">{key}</span>
-              <div>
-                <span className="font-mono text-[11px] text-ink">{val}</span>
-                <p className="text-[10px] text-ghost">{desc}</p>
-              </div>
-            </div>
-          ))}
+        <div className="h-px bg-warm" />
+        <p className="text-[10px] font-mono text-dim uppercase tracking-widest">Quality thresholds</p>
+        <div>
+          <label className={labelCls}>Min volume level (dBFS)</label>
+          <input type="number" className={fieldCls}
+            value={opts?.minDbfs ?? -18} min={-60} max={0}
+            onChange={e => setOpts({ minDbfs: Number(e.target.value) })} />
+          <p className="text-[10px] text-ghost mt-1">How loud the recording must be. −18 is a good default; lower = more lenient.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Min signal-to-noise ratio (dB)</label>
+          <input type="number" className={fieldCls}
+            value={opts?.minSnrDb ?? 15} min={0} max={60}
+            onChange={e => setOpts({ minSnrDb: Number(e.target.value) })} />
+          <p className="text-[10px] text-ghost mt-1">How clean the recording must be. 15 dB is a good default; lower = more lenient.</p>
         </div>
       </div>
     )

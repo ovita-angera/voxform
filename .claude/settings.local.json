@@ -30,7 +30,14 @@
       "Bash(npm install class-variance-authority clsx tailwind-merge lucide-react)",
       "Bash(npm install @radix-ui/react-dialog @radix-ui/react-tabs @radix-ui/react-select @radix-ui/react-dropdown-menu @radix-ui/react-tooltip @radix-ui/react-popover react-day-picker date-fns)",
       "Bash(npx tailwindcss init -p)",
-      "Bash(\"c:/Users/user/OneDrive/Desktop/Voxform/voxform-vite/index.html\":*)"
+      "Bash(\"c:/Users/user/OneDrive/Desktop/Voxform/voxform-vite/index.html\":*)",
+      "Bash(uvicorn main:app --port 4000 --reload)",
+      "Bash(npm run:*)",
+      "Bash(python -m uvicorn main:app --port 4000 --reload)",
+      "Bash(python -c \"import config; print\\([x for x in dir\\(config\\) if not x.startswith\\(''_''\\)]\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import bcrypt; print\\(bcrypt.__version__\\); h = bcrypt.hashpw\\(b''test'', bcrypt.gensalt\\(\\)\\); print\\(''new hash prefix:'', h[:6]\\)\")",
+      "Bash(python -c \"import config; print\\(''STORAGE_URL:'', config.STORAGE_URL\\); print\\(''STORAGE_PATH:'', config.STORAGE_PATH\\)\")"
     ]
   }
 }

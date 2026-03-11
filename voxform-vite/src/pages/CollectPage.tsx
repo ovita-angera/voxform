@@ -319,7 +319,9 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
     />
   )
   if (q.type === 'SINGLE_CHOICE' || q.type === 'DROPDOWN') {
-    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? []
+    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? [
+      { id: '1', label: 'Option A' }, { id: '2', label: 'Option B' },
+    ]
     return (
       <div className="flex flex-col gap-2">
         {choices.map((c, i) => (
@@ -341,7 +343,9 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
     )
   }
   if (q.type === 'MULTIPLE_CHOICE') {
-    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? []
+    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? [
+      { id: '1', label: 'Option A' }, { id: '2', label: 'Option B' },
+    ]
     const selected: string[] = (value as string[]) ?? []
     return (
       <div className="flex flex-col gap-2">

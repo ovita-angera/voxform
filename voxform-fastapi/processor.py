@@ -104,6 +104,21 @@ async def process(job: Job) -> None:
         except Exception as exc:
             logger.warning("transcription failed — skipping: %s", exc)
 
+    # Build public URL for the final audio file and write it back to responses
+    if wav_path and os.path.exists(wav_path):
+        storage_abs = os.path.abspath(config.STORAGE_PATH)
+        wav_abs = os.path.abspath(wav_path)
+        try:
+            rel = os.path.relpath(wav_abs, storage_abs).replace(os.sep, "/")
+            public_url = f"{config.STORAGE_URL}/{rel}"
+        except ValueError:
+            public_url = None
+        if public_url:
+            await db.execute(
+                "UPDATE responses SET audio_url = :u, audio_wav_url = :u, updated_at = NOW() WHERE id = :id",
+                {"u": public_url, "id": response_id},
+            )
+
     processing_ms = int((time.time() - start_ms) * 1000)
     await db.execute(
         "UPDATE audio_jobs SET status = 'COMPLETE', processing_ms = :ms, updated_at = NOW() WHERE id = :id",

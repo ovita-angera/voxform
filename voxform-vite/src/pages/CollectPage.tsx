@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -138,14 +138,18 @@ export function CollectPage() {
     <div className="fixed inset-0 flex flex-col bg-paper text-ink overflow-hidden font-sans">
       {!isIntro && !isDone && (
         <div className="shrink-0 border-b border-warm">
-          <div className="h-0.5 bg-warm">
-            <div className="h-full bg-ink transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
+          {/* Progress bar — 2px, smooth */}
+          <div className="h-0.5 bg-warm/60">
+            <div className="h-full bg-violet transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
           </div>
           <div className="flex items-center justify-between px-5 h-11">
-            <button onClick={back} className="text-dim hover:text-ink transition-colors p-1 -ml-1 font-mono text-[13px]">←</button>
+            <button type="button" onClick={back}
+              className="text-dim hover:text-ink transition-colors p-1 -ml-1 font-mono text-[13px]">
+              ←
+            </button>
             <span className="font-mono text-[11px] text-dim tracking-[0.08em]">{step} / {total}</span>
-            <span className="font-mono text-[11px] text-dim">
-              {survey.title.length > 22 ? survey.title.slice(0, 22) + '…' : survey.title}
+            <span className="font-mono text-[11px] text-dim truncate max-w-[140px]">
+              {survey.title}
             </span>
           </div>
         </div>
@@ -189,7 +193,7 @@ function IntroScreen({ survey, onStart }: { survey: Survey; onStart: () => void 
           {[
             [`${n}`, 'questions'],
             ['WAV', '16kHz audio'],
-            ['Offline', 'capable'],
+            ['Secure', 'encrypted'],
           ].map(([v, l]) => (
             <div key={l} className="border-l-2 border-warm pl-3">
               <p className="font-serif text-[16px] font-semibold text-ink">{v}</p>
@@ -200,8 +204,9 @@ function IntroScreen({ survey, onStart }: { survey: Survey; onStart: () => void 
       </div>
       <div className="pt-10">
         <button
+          type="button"
           onClick={onStart}
-          className="w-full h-14 bg-ink text-paper font-sans font-semibold text-[15px] tracking-[0.01em] transition-opacity hover:opacity-85"
+          className="w-full h-14 rounded-xl bg-ink text-paper font-sans font-semibold text-[15px] tracking-[0.01em] transition-opacity hover:opacity-85 shadow-sm"
         >
           Begin survey →
         </button>
@@ -217,8 +222,31 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
 }) {
   const isLast = index === total
   void onBack
+
+  // Stable refs so the keydown listener never needs re-registration
+  const canProceedRef = useRef(canProceed)
+  const onNextRef = useRef(onNext)
+  canProceedRef.current = canProceed
+  onNextRef.current = onNext
+
+  // Keyboard navigation: Enter → next, number keys for choices
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'TEXTAREA') return  // allow newlines in textarea
+
+      if (e.key === 'Enter' && canProceedRef.current) {
+        e.preventDefault()
+        onNextRef.current()
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])  // registers once per question mount
+
   return (
-    <div className="min-h-full flex flex-col max-w-[520px] mx-auto">
+    <div className="min-h-full flex flex-col max-w-[520px] mx-auto question-enter">
       <div className="flex-1 p-8 pt-8">
         <p className="font-mono text-[11px] text-dim tracking-[0.1em] mb-5 uppercase">
           {String(index).padStart(2, '0')} — {question.type.replace(/_/g, ' ')}
@@ -230,7 +258,7 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
         {question.description && (
           <p className="text-[13px] text-dim leading-relaxed mb-6">{question.description}</p>
         )}
-        <QuestionInput question={question} value={value} onChange={onChange} />
+        <QuestionInput question={question} value={value} onChange={onChange} onCommit={canProceed ? onNext : undefined} />
       </div>
 
       <div className="px-6 pb-8 pt-4 border-t border-warm/60">
@@ -246,7 +274,10 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
           {submitting ? 'Submitting…' : isLast ? 'Submit' : 'Next →'}
         </button>
         {!!question.required && !canProceed && !submitting && (
-          <p className="text-center mt-2 font-mono text-[11px] text-ghost">This question is required</p>
+          <p className="text-center mt-2 font-mono text-[11px] text-ghost">Required · press Enter when ready</p>
+        )}
+        {canProceed && !submitting && (
+          <p className="text-center mt-2 font-mono text-[11px] text-ghost/70">press Enter ↵</p>
         )}
       </div>
     </div>
@@ -258,7 +289,9 @@ function SectionBreakInput({ onChange }: { onChange: (v: unknown) => void }) {
   return <div className="h-0.5 bg-warm my-2" />
 }
 
-function QuestionInput({ question: q, value, onChange }: { question: Question; value: unknown; onChange: (v: unknown) => void }) {
+function QuestionInput({ question: q, value, onChange, onCommit }: {
+  question: Question; value: unknown; onChange: (v: unknown) => void; onCommit?: () => void
+}) {
   const inputStyle = 'w-full px-4 py-3.5 rounded-xl border border-warm bg-paper text-[15px] text-ink font-sans placeholder:text-ghost focus:outline-none focus:border-ink focus:shadow-sm transition-all'
 
   if (q.type === 'SHORT_TEXT' || q.type === 'EMAIL' || q.type === 'NAME' || q.type === 'PHONE') return (
@@ -289,13 +322,17 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
     const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? []
     return (
       <div className="flex flex-col gap-2">
-        {choices.map(c => (
-          <button type="button" key={c.id} onClick={() => onChange(c.id)}
+        {choices.map((c, i) => (
+          <button type="button" key={c.id}
+            onClick={() => { onChange(c.id); setTimeout(() => onCommit?.(), 120) }}
             className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl border text-left transition-all
               ${value === c.id ? 'border-ink bg-ink text-paper shadow-sm' : 'border-warm hover:border-ink hover:shadow-sm'}`}>
-            <div className={`w-4 h-4 rounded-full border-[1.5px] shrink-0 transition-all flex items-center justify-center
+            <div className={`w-5 h-5 rounded-full border-[1.5px] shrink-0 flex items-center justify-center transition-all
               ${value === c.id ? 'border-paper' : 'border-ghost'}`}>
-              {value === c.id && <div className="w-2 h-2 rounded-full bg-paper" />}
+              {value === c.id
+                ? <div className="w-2.5 h-2.5 rounded-full bg-paper" />
+                : <span className="font-mono text-[10px] text-ghost">{i + 1}</span>
+              }
             </div>
             <span className={`text-[15px] transition-colors ${value === c.id ? 'text-paper' : 'text-ink'}`}>{c.label}</span>
           </button>
@@ -308,16 +345,19 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
     const selected: string[] = (value as string[]) ?? []
     return (
       <div className="flex flex-col gap-2">
-        {choices.map(c => {
+        {choices.map((c, i) => {
           const on = selected.includes(c.id)
           return (
             <button type="button" key={c.id}
               onClick={() => onChange(on ? selected.filter(x => x !== c.id) : [...selected, c.id])}
               className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl border text-left transition-all
                 ${on ? 'border-ink bg-ink text-paper shadow-sm' : 'border-warm hover:border-ink hover:shadow-sm'}`}>
-              <div className={`w-4 h-4 rounded border-[1.5px] shrink-0 flex items-center justify-center transition-all
+              <div className={`w-5 h-5 rounded border-[1.5px] shrink-0 flex items-center justify-center transition-all
                 ${on ? 'border-paper bg-paper' : 'border-ghost'}`}>
-                {on && <span className="text-ink text-[10px] font-bold leading-none">✓</span>}
+                {on
+                  ? <span className="text-ink text-[10px] font-bold leading-none">✓</span>
+                  : <span className="font-mono text-[10px] text-ghost">{i + 1}</span>
+                }
               </div>
               <span className={`text-[15px] transition-colors ${on ? 'text-paper' : 'text-ink'}`}>{c.label}</span>
             </button>
@@ -330,11 +370,20 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
     const opts = q.options as { yesLabel?: string; noLabel?: string } | undefined
     return (
       <div className="flex gap-3">
-        {[{ val: 'yes', label: opts?.yesLabel ?? 'Yes' }, { val: 'no', label: opts?.noLabel ?? 'No' }].map(o => (
-          <button type="button" key={o.val} onClick={() => onChange(o.val)}
-            className={`flex-1 py-5 rounded-xl text-[16px] font-medium border transition-all
-              ${value === o.val ? 'bg-ink text-paper border-ink shadow-sm' : 'bg-paper text-ink border-warm hover:border-ink hover:shadow-sm'}`}>
-            {o.label}
+        {[
+          { val: 'yes', label: opts?.yesLabel ?? 'Yes', hint: 'Y' },
+          { val: 'no',  label: opts?.noLabel  ?? 'No',  hint: 'N' },
+        ].map(o => (
+          <button type="button" key={o.val}
+            onClick={() => { onChange(o.val); setTimeout(() => onCommit?.(), 120) }}
+            className={`flex-1 py-5 rounded-xl border transition-all relative
+              ${value === o.val
+                ? 'bg-ink text-paper border-ink shadow-sm'
+                : 'bg-paper text-ink border-warm hover:border-ink hover:shadow-sm'}`}>
+            <span className="text-[16px] font-medium">{o.label}</span>
+            <span className={`absolute top-2 right-3 font-mono text-[10px] ${value === o.val ? 'text-paper/50' : 'text-ghost'}`}>
+              {o.hint}
+            </span>
           </button>
         ))}
       </div>
@@ -347,9 +396,10 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
       <div>
         <div className="flex gap-1.5">
           {pts.map(v => (
-            <button key={v} onClick={() => onChange(v)}
-              className={`flex-1 h-13 border font-mono text-[14px] transition-all
-                ${value === v ? 'bg-ink text-paper border-ink' : 'bg-paper text-dim border-warm hover:border-ink hover:text-ink'}`}
+            <button key={v} type="button"
+              onClick={() => { onChange(v); setTimeout(() => onCommit?.(), 120) }}
+              className={`flex-1 border font-mono text-[14px] rounded-xl transition-all
+                ${value === v ? 'bg-ink text-paper border-ink shadow-sm' : 'bg-paper text-dim border-warm hover:border-ink hover:text-ink'}`}
               style={{ height: 52 }}>
               {v}
             </button>
@@ -369,9 +419,10 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
       <div>
         <div className="flex gap-1 flex-wrap">
           {pts.map(v => (
-            <button key={v} onClick={() => onChange(v)}
-              className={`flex-1 min-w-[36px] font-mono text-[14px] border transition-all
-                ${value === v ? 'bg-ink text-paper border-ink' : 'bg-paper text-dim border-warm hover:border-ink hover:text-ink'}`}
+            <button key={v} type="button"
+              onClick={() => { onChange(v); setTimeout(() => onCommit?.(), 120) }}
+              className={`flex-1 min-w-[36px] font-mono text-[14px] rounded-lg border transition-all
+                ${value === v ? 'bg-ink text-paper border-ink shadow-sm' : 'bg-paper text-dim border-warm hover:border-ink hover:text-ink'}`}
               style={{ height: 52 }}>
               {v}
             </button>
@@ -388,8 +439,9 @@ function QuestionInput({ question: q, value, onChange }: { question: Question; v
     return (
       <div className="flex gap-2">
         {Array.from({ length: max }, (_, i) => i + 1).map(v => (
-          <button key={v} onClick={() => onChange(v)}
-            className={`text-[32px] bg-none border-none cursor-pointer transition-colors
+          <button key={v} type="button"
+            onClick={() => { onChange(v); setTimeout(() => onCommit?.(), 180) }}
+            className={`text-[32px] bg-none border-none cursor-pointer transition-all hover:scale-110
               ${(value as number) >= v ? 'text-ink' : 'text-warm'}`}>
             ★
           </button>
@@ -455,7 +507,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
       })
 
-      // Web Audio API for real-time dBFS metering
       const audioCtx = new AudioContext()
       audioCtxRef.current = audioCtx
       const analyser = audioCtx.createAnalyser()
@@ -494,7 +545,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
       }, 1000)
       waveRef.current = setInterval(() => setBars(Array(20).fill(0).map(() => 3 + Math.random() * 29)), 90)
 
-      // dBFS polling every 120 ms
       const buf = new Float32Array(analyser.frequencyBinCount)
       qcIntervalRef.current = setInterval(() => {
         analyser.getFloatTimeDomainData(buf)
@@ -539,7 +589,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
 
   const meetsMin = duration >= minDuration
 
-  // Signal quality helpers
   const sigTier = liveDbfs > -18 ? 'good' : liveDbfs > -30 ? 'ok' : 'poor'
   const sigBarColor = sigTier === 'good' ? 'bg-emerald-400' : sigTier === 'ok' ? 'bg-amber-400' : 'bg-red-400'
   const sigTextColor = sigTier === 'good' ? 'text-emerald-600' : sigTier === 'ok' ? 'text-amber-600' : 'text-red-500'
@@ -555,7 +604,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
         {fmt(duration)}
       </div>
 
-      {/* Waveform bars */}
       <div className="flex gap-[3px] items-center h-10">
         {bars.map((h, i) => (
           <div key={i} className={`w-[3px] rounded-full transition-all ${state === 'recording' ? 'bg-ink' : 'bg-warm'}`}
@@ -566,7 +614,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
         ))}
       </div>
 
-      {/* Real-time dBFS meter — only while recording */}
       {state === 'recording' && (
         <div className="w-full space-y-1.5">
           <div className="flex items-center justify-between">
@@ -581,7 +628,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
         </div>
       )}
 
-      {/* Record / stop button */}
       {state !== 'done' ? (
         <button
           type="button"
@@ -599,7 +645,7 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
             className="flex-1 h-11 rounded-xl border border-warm text-[13px] text-dim hover:text-ink hover:border-ink transition-all">
             Re-record
           </button>
-          <div className="flex-[2] h-11 rounded-xl border border-violet/40 bg-violet/8 text-violet text-[13px] font-semibold flex items-center justify-center gap-2">
+          <div className="flex-[2] h-11 rounded-xl border border-violet/40 bg-violet/5 text-violet text-[13px] font-semibold flex items-center justify-center gap-2">
             <span>✓</span> Recorded
           </div>
         </div>
@@ -609,7 +655,6 @@ function AudioWidget({ minDuration, maxDuration, value, onChange }: {
         <audio controls src={value.blobUrl} className="w-full h-9" />
       )}
 
-      {/* QC summary after done */}
       {state === 'done' && qcSummary && (
         <p className={`font-mono text-[11px] ${sumColor}`}>
           Signal: {sumLabel} · avg {qcSummary.avgDbfs} dBFS
@@ -643,7 +688,7 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
   const [msg, setMsg] = useState('')
   const loc = value as { lat: number; lng: number; accuracy: number } | null
 
-  function capture() {
+  const capture = useCallback(() => {
     setState('loading')
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -653,14 +698,14 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
       () => { setState('error'); setMsg('Location access denied. Please enable and retry.') },
       { enableHighAccuracy: true, timeout: 15000 },
     )
-  }
+  }, [onChange])
 
   if (state === 'done' && loc) return (
-    <div className="border border-warm p-5">
+    <div className="rounded-xl border border-warm p-5">
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-2 h-2 rounded-full bg-ink" />
+        <div className="w-2 h-2 rounded-full bg-violet" />
         <span className="font-mono text-[12px] text-ink">Location captured</span>
-        <button onClick={() => { onChange(null); setState('idle') }}
+        <button type="button" onClick={() => { onChange(null); setState('idle') }}
           className="ml-auto font-mono text-[11px] text-dim hover:text-ink transition-colors">
           Reset
         </button>
@@ -673,13 +718,13 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
   )
 
   return (
-    <div className="border border-warm p-7 text-center">
+    <div className="rounded-xl border border-warm p-7 text-center">
       {state === 'error' && <p className="text-[12px] text-red-500 mb-4 leading-relaxed">{msg}</p>}
-      <button onClick={capture} disabled={state === 'loading'}
-        className={`h-13 px-7 border font-sans font-semibold text-[14px] transition-all
+      <button type="button" onClick={capture} disabled={state === 'loading'}
+        className={`h-13 px-7 rounded-xl font-sans font-semibold text-[14px] border transition-all
           ${state === 'loading'
             ? 'border-warm text-dim cursor-not-allowed'
-            : 'border-ink bg-ink text-paper hover:opacity-85 cursor-pointer'}`}
+            : 'border-ink bg-ink text-paper hover:opacity-85 cursor-pointer shadow-sm'}`}
         style={{ height: 52 }}>
         {state === 'loading' ? 'Locating…' : '⊕ Capture location'}
       </button>
@@ -690,10 +735,10 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
 function DoneScreen({ survey }: { survey: Survey }) {
   return (
     <div className="min-h-full flex flex-col items-center justify-center text-center px-8 gap-6 max-w-[420px] mx-auto">
-      <div className="w-12 h-12 border-[1.5px] border-ink flex items-center justify-center">
-        <span className="font-mono text-[20px] text-ink">✓</span>
+      <div className="w-14 h-14 rounded-full border-[1.5px] border-ink flex items-center justify-center pop-in">
+        <span className="font-mono text-[22px] text-ink">✓</span>
       </div>
-      <div>
+      <div className="question-enter" style={{ animationDelay: '0.1s' }}>
         <h2 className="font-serif text-[28px] tracking-tight text-ink mb-2.5">Thank you</h2>
         <p className="text-[14px] text-dim leading-relaxed max-w-[280px]">
           Your responses have been recorded. You can now close this window.
@@ -710,10 +755,9 @@ function FullMessage({ text, spinner }: { text: string; spinner?: boolean }) {
       {spinner ? (
         <div className="flex gap-1.5">
           {[0, 1, 2].map(i => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-ink"
-              style={{ animation: `pp 1.2s ease-in-out ${i * 0.15}s infinite` }} />
+            <div key={i} className="w-1.5 h-1.5 rounded-full bg-ink loader-dot"
+              style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          <style>{`@keyframes pp{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}`}</style>
         </div>
       ) : <span className="text-[28px] opacity-30">○</span>}
       <p className="text-[14px] text-dim">{text}</p>

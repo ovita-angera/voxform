@@ -5,14 +5,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink:          '#141414',
-        paper:        '#F2F0EB',
-        warm:         '#E8E4DC',
-        dim:          '#9A9490',
-        ghost:        '#C8C4BC',
-        mark:         '#2A2A2A',
-        violet:       '#6B5BD6',
-        'violet-dim': '#8B7DD8',
+        ink:          'rgb(var(--ink)          / <alpha-value>)',
+        paper:        'rgb(var(--paper)        / <alpha-value>)',
+        warm:         'rgb(var(--warm)         / <alpha-value>)',
+        dim:          'rgb(var(--dim)          / <alpha-value>)',
+        ghost:        'rgb(var(--ghost)        / <alpha-value>)',
+        mark:         'rgb(var(--mark)         / <alpha-value>)',
+        violet:       'rgb(var(--violet)       / <alpha-value>)',
+        'violet-dim': 'rgb(var(--violet-dim)   / <alpha-value>)',
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],

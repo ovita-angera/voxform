@@ -2,23 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Color tokens (space-separated RGB so Tailwind opacity utilities work) ── */
 :root {
-  --ink:    #141414;
-  --paper:  #F2F0EB;
-  --warm:   #E8E4DC;
-  --dim:    #9A9490;
-  --ghost:  #C8C4BC;
-  --mark:   #2A2A2A;
-  --violet: #6B5BD6;
+  --ink:        20 20 20;        /* #141414 */
+  --paper:      242 240 235;     /* #F2F0EB */
+  --warm:       232 228 220;     /* #E8E4DC */
+  --dim:        154 148 144;     /* #9A9490 */
+  --ghost:      200 196 188;     /* #C8C4BC */
+  --mark:       42 42 42;        /* #2A2A2A */
+  --violet:     107 91 214;      /* #6B5BD6 */
+  --violet-dim: 139 125 216;     /* #8B7DD8 */
 }
 
 .dark {
-  --ink:    #F2F0EB;
-  --paper:  #141414;
-  --warm:   #1E1E1C;
-  --dim:    #787470;
-  --ghost:  #3C3C38;
-  --mark:   #E0DDD8;
+  --ink:    242 240 235;   /* #F2F0EB */
+  --paper:  20 20 20;      /* #141414 */
+  --warm:   30 30 28;      /* #1E1E1C */
+  --dim:    120 116 112;   /* #787470 */
+  --ghost:  60 60 56;      /* #3C3C38 */
+  --mark:   224 221 216;   /* #E0DDD8 */
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -28,19 +30,36 @@ body {
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--paper);
-  color: var(--ink);
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--warm); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--warm)); border-radius: 2px; }
 
-::selection { background: var(--ink); color: var(--paper); }
+::selection { background: rgb(var(--ink)); color: rgb(var(--paper)); }
 
 a, button { transition-property: color, background-color, border-color, opacity; transition-duration: 0.12s; }
 
-/* App loader dots */
+/* ── Question slide-in (CollectPage) ────────────────────────────────────── */
+@keyframes question-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.question-enter {
+  animation: question-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Done screen icon pop ───────────────────────────────────────────────── */
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.6); }
+  70%  { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pop-in { animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ── App loader dots ────────────────────────────────────────────────────── */
 @keyframes loader-pulse { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
 .loader-dot   { animation: loader-pulse 1.2s ease-in-out infinite; }
 .loader-dot-1 { animation-delay: 0s; }

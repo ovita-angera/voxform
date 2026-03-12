@@ -315,7 +315,7 @@ export function SurveyBuilderPage() {
                 return (
                   <button
                     key={q.id}
-                    onClick={() => { setSelectedId(q.id); setPickingType(false) }}
+                    onClick={() => { setSelectedId(q.id); setPickingType(false); setShowList(false) }}
                     className={cn(
                       'group w-full flex items-center gap-2 px-2 py-2.5 text-left rounded-lg transition-all relative',
                       isActive
@@ -355,7 +355,7 @@ export function SurveyBuilderPage() {
 
               {/* Add question — inline at end of list */}
               <button
-                onClick={() => { setPickingType(true); setSelectedId(null) }}
+                onClick={() => { setPickingType(true); setSelectedId(null); setShowList(false) }}
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-2.5 text-left rounded-lg transition-all mt-1',
                   pickingType
@@ -377,7 +377,7 @@ export function SurveyBuilderPage() {
           <div className={cn('flex-1 overflow-auto bg-warm/10', showList && 'hidden md:block')}>
             {pickingType ? (
               /* ── Type picker view ─────────────────────────────────────── */
-              <div className="max-w-[800px] mx-auto px-6 py-8">
+              <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-8">
                 <div className="flex items-center gap-3 mb-6">
                   {selectedId && (
                     <button
@@ -463,7 +463,7 @@ export function SurveyBuilderPage() {
               </div>
             ) : selected && editingQ ? (
               /* ── Inline question editor ───────────────────────────────── */
-              <div className="max-w-[680px] mx-auto px-6 py-10">
+              <div className="max-w-[680px] mx-auto px-4 sm:px-6 py-8 pb-28 md:pb-8">
                 <div className="bg-paper rounded-2xl border border-warm shadow-sm overflow-hidden">
                   {/* Card header */}
                   <div className="flex items-center gap-3 px-5 py-3 border-b border-warm bg-warm/20">
@@ -537,6 +537,35 @@ export function SurveyBuilderPage() {
                     Next <ChevronRight size={13} />
                   </button>
                 </div>
+
+                {/* ── Mobile-only settings (right panel is hidden on mobile) ─── */}
+                <div className="md:hidden mt-6 bg-paper rounded-2xl border border-warm shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-warm">
+                    <span className="text-[11px] font-mono text-dim uppercase tracking-widest">Settings</span>
+                  </div>
+                  <div className="p-4 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[13px] font-medium text-ink">Required</p>
+                        <p className="text-[11px] text-dim mt-0.5">Must be answered</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleRequired}
+                        className={cn(
+                          'w-11 h-6 rounded-full border-2 transition-all relative shrink-0 cursor-pointer',
+                          editingQ.required ? 'bg-violet border-violet' : 'bg-warm border-ghost/60',
+                        )}
+                      >
+                        <span className={cn(
+                          'absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full shadow-sm transition-all duration-200',
+                          editingQ.required ? 'right-[2px] bg-white' : 'left-[2px] bg-ghost',
+                        )} />
+                      </button>
+                    </div>
+                    <TypeSettings q={editingQ} setQ={setQAndSave} />
+                  </div>
+                </div>
               </div>
             ) : (
               /* ── Empty state ──────────────────────────────────────────── */
@@ -559,6 +588,17 @@ export function SurveyBuilderPage() {
               </div>
             )}
           </div>
+
+          {/* ── Mobile FAB: Add question ──────────────────────────────────── */}
+          {!pickingType && (
+            <button
+              type="button"
+              onClick={() => { setPickingType(true); setSelectedId(null); setShowList(false) }}
+              className="md:hidden fixed bottom-6 right-5 z-40 w-14 h-14 bg-violet text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+            >
+              <Plus size={22} />
+            </button>
+          )}
 
           {/* ── Right: Properties panel ───────────────────────────────────── */}
           {editingQ && !pickingType && (

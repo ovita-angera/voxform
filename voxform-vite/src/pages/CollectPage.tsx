@@ -481,18 +481,42 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
   )
 }
 
+// ── Audio quality helpers ──────────────────────────────────────────────────────
+type MetricTier = 'good' | 'warn' | 'poor'
+
+function computeSnr(rmsHistory: number[]): number {
+  if (rmsHistory.length < 10) return 0
+  const sorted = [...rmsHistory].sort((a, b) => a - b)
+  const noiseFloor = sorted[Math.floor(sorted.length * 0.10)] || 1e-10
+  const signalLevel = sorted[Math.floor(sorted.length * 0.85)] || 1e-10
+  return Math.max(0, Math.round(20 * Math.log10(Math.max(signalLevel / noiseFloor, 1e-10))))
+}
+
+function computeSsl(rmsHistory: number[]): number {
+  if (rmsHistory.length === 0) return 0
+  const avg = rmsHistory.reduce((s, v) => s + v, 0) / rmsHistory.length
+  return parseFloat((avg * 33).toFixed(1))
+}
+
+interface QcSummary { avgDbfs: number; pctGood: number; sal: number; snr: number; ssl: number }
+
 // ── Audio widget ───────────────────────────────────────────────────────────────
 function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange }: {
   minDuration: number; maxDuration: number; minDbfs?: number; value: AudioValue | null; onChange: (v: unknown) => void
 }) {
+  const qcRaw = value?.qcResult as Partial<QcSummary> | undefined
   const [state, setState] = useState<'idle' | 'recording' | 'done'>(value ? 'done' : 'idle')
   const [duration, setDuration] = useState(value?.duration ?? 0)
   const [error, setError] = useState('')
   const [bars, setBars] = useState<number[]>(Array(20).fill(4))
   const [liveDbfs, setLiveDbfs] = useState(-60)
-  const [qcSummary, setQcSummary] = useState<{ avgDbfs: number; pctGood: number } | null>(
-    (value?.qcResult as { avgDbfs: number; pctGood: number } | undefined) ?? null
+  const [sal, setSal] = useState(0)
+  const [snr, setSnr] = useState(0)
+  const [ssl, setSsl] = useState(0)
+  const [qcSummary, setQcSummary] = useState<QcSummary | null>(
+    qcRaw ? { avgDbfs: qcRaw.avgDbfs ?? 0, pctGood: qcRaw.pctGood ?? 0, sal: qcRaw.sal ?? 0, snr: qcRaw.snr ?? 0, ssl: qcRaw.ssl ?? 0 } : null
   )
+
   const mrRef = useRef<MediaRecorder | null>(null)
   const chunks = useRef<BlobPart[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -501,6 +525,8 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const dbfsHistoryRef = useRef<number[]>([])
+  const rmsHistoryRef = useRef<number[]>([])
+  const satCountRef = useRef(0)
   const durationRef = useRef(value?.duration ?? 0)
 
   function fmt(s: number) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
@@ -511,14 +537,13 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
       })
-
       const audioCtx = new AudioContext()
       audioCtxRef.current = audioCtx
       const analyser = audioCtx.createAnalyser()
       analyser.fftSize = 256
       analyserRef.current = analyser
       audioCtx.createMediaStreamSource(stream).connect(analyser)
-      dbfsHistoryRef.current = []
+      dbfsHistoryRef.current = []; rmsHistoryRef.current = []; satCountRef.current = 0
 
       chunks.current = []
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -529,10 +554,15 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
       mr.onstop = () => {
         const blob = new Blob(chunks.current, { type: mr.mimeType })
         const url = URL.createObjectURL(blob)
-        const history = dbfsHistoryRef.current
-        const qcResult = history.length > 0 ? {
-          avgDbfs: Math.round(history.reduce((s, v) => s + v, 0) / history.length),
-          pctGood: parseFloat((history.filter(v => v > -18).length / history.length).toFixed(2)),
+        const dbHist = dbfsHistoryRef.current
+        const rmsH = rmsHistoryRef.current
+        const dur = durationRef.current
+        const qcResult: Record<string, number> | undefined = dbHist.length > 0 ? {
+          avgDbfs: Math.round(dbHist.reduce((s, v) => s + v, 0) / dbHist.length),
+          pctGood: parseFloat((dbHist.filter(v => v > minDbfs).length / dbHist.length).toFixed(2)),
+          sal: dur > 0 ? Math.round(satCountRef.current / (dur / 60)) : 0,
+          snr: computeSnr(rmsH),
+          ssl: computeSsl(rmsH),
         } : undefined
         onChange({ blob, blobUrl: url, duration: durationRef.current, mimeType: mr.mimeType, qcResult })
         stream.getTracks().forEach(t => t.stop())
@@ -540,14 +570,9 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
       mr.start(250)
       mrRef.current = mr
       setState('recording')
-      durationRef.current = 0
-      setDuration(0)
-      setLiveDbfs(-60)
+      durationRef.current = 0; setDuration(0); setLiveDbfs(-60); setSal(0); setSnr(0); setSsl(0)
 
-      timerRef.current = setInterval(() => {
-        durationRef.current += 1
-        setDuration(d => d + 1)
-      }, 1000)
+      timerRef.current = setInterval(() => { durationRef.current += 1; setDuration(d => d + 1) }, 1000)
       waveRef.current = setInterval(() => setBars(Array(20).fill(0).map(() => 3 + Math.random() * 29)), 90)
 
       const buf = new Float32Array(analyser.frequencyBinCount)
@@ -555,8 +580,15 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
         analyser.getFloatTimeDomainData(buf)
         const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length)
         const db = Math.max(-60, Math.min(0, 20 * Math.log10(Math.max(rms, 1e-10))))
+        // Saturation: samples at or near clipping
+        satCountRef.current += buf.filter(v => Math.abs(v) >= 0.98).length
         dbfsHistoryRef.current.push(db)
+        rmsHistoryRef.current.push(rms)
         setLiveDbfs(db)
+        const dur = durationRef.current
+        setSal(dur > 0 ? Math.round(satCountRef.current / (dur / 60)) : 0)
+        setSnr(computeSnr(rmsHistoryRef.current))
+        setSsl(computeSsl(rmsHistoryRef.current))
       }, 120)
     } catch {
       setError('Microphone access denied. Please allow microphone permission and try again.')
@@ -566,13 +598,18 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
   function stop() {
     if (qcIntervalRef.current) { clearInterval(qcIntervalRef.current); qcIntervalRef.current = null }
     audioCtxRef.current?.close(); audioCtxRef.current = null; analyserRef.current = null
-
-    const history = dbfsHistoryRef.current
-    if (history.length > 0) {
-      const avg = history.reduce((s, v) => s + v, 0) / history.length
-      setQcSummary({ avgDbfs: Math.round(avg), pctGood: history.filter(v => v > -18).length / history.length })
+    const dbHist = dbfsHistoryRef.current
+    const rmsH = rmsHistoryRef.current
+    const dur = durationRef.current
+    if (dbHist.length > 0) {
+      setQcSummary({
+        avgDbfs: Math.round(dbHist.reduce((s, v) => s + v, 0) / dbHist.length),
+        pctGood: dbHist.filter(v => v > minDbfs).length / dbHist.length,
+        sal: dur > 0 ? Math.round(satCountRef.current / (dur / 60)) : 0,
+        snr: computeSnr(rmsH),
+        ssl: computeSsl(rmsH),
+      })
     }
-
     mrRef.current?.stop()
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
     if (waveRef.current) { clearInterval(waveRef.current); waveRef.current = null }
@@ -582,7 +619,7 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
 
   function reset() {
     onChange(null); setState('idle'); setQcSummary(null); setLiveDbfs(-60)
-    durationRef.current = 0; setDuration(0)
+    durationRef.current = 0; setDuration(0); setSal(0); setSnr(0); setSsl(0)
   }
 
   useEffect(() => () => {
@@ -594,53 +631,87 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
 
   const meetsMin = duration >= minDuration
 
-  const sigTier = liveDbfs > minDbfs ? 'good' : liveDbfs > (minDbfs - 12) ? 'ok' : 'poor'
-  const sigBarColor = sigTier === 'good' ? 'bg-emerald-400' : sigTier === 'ok' ? 'bg-amber-400' : 'bg-red-400'
-  const sigTextColor = sigTier === 'good' ? 'text-emerald-600' : sigTier === 'ok' ? 'text-amber-600' : 'text-red-500'
-  const sigBarWidth = `${Math.max(3, ((liveDbfs + 60) / 60) * 100)}%`
+  // Live metric tiers
+  const sigTier: MetricTier = liveDbfs > minDbfs ? 'good' : liveDbfs > (minDbfs - 12) ? 'warn' : 'poor'
+  const salTier: MetricTier = sal <= 600 ? 'good' : sal <= 900 ? 'warn' : 'poor'
+  const snrTier: MetricTier = snr >= 13 ? 'good' : snr >= 8 ? 'warn' : 'poor'
+  const sslTier: MetricTier = ssl <= 3.3 ? 'good' : ssl <= 5.0 ? 'warn' : 'poor'
 
-  const sumTier = qcSummary ? (qcSummary.avgDbfs > minDbfs ? 'good' : qcSummary.avgDbfs > (minDbfs - 12) ? 'ok' : 'poor') : null
-  const sumLabel = sumTier === 'good' ? 'Sounds great' : sumTier === 'ok' ? 'Sounds okay' : 'Sounds too quiet'
-  const sumColor = sumTier === 'good' ? 'text-emerald-600' : sumTier === 'ok' ? 'text-amber-600' : 'text-red-500'
+  const allPass = !!qcSummary && qcSummary.sal <= 600 && qcSummary.snr >= 13 && qcSummary.ssl <= 3.3
+  const txnDone = state === 'done'
 
   return (
-    <div className="rounded-2xl border border-warm/70 bg-paper shadow-sm p-8 flex flex-col items-center gap-5">
-      <div className={`font-mono text-[44px] font-medium tracking-[-0.04em] tabular-nums leading-none transition-colors ${state === 'recording' ? 'text-ink' : 'text-dim'}`}>
-        {fmt(duration)}
+    <div className="rounded-2xl border border-warm/70 bg-paper shadow-sm p-5 flex flex-col items-center gap-4 w-full">
+
+      {/* Header: NC badge — timer — TXN badge */}
+      <div className="w-full flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-widest uppercase font-semibold border transition-all
+          ${state === 'recording'
+            ? 'bg-indigov/10 text-indigov border-indigov/25'
+            : 'bg-warm/50 text-dim border-warm/60'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full transition-all ${state === 'recording' ? 'bg-indigov' : 'bg-ghost'}`} />
+          NC {state === 'recording' ? 'ON' : '—'}
+        </span>
+
+        <span className={`font-mono text-[44px] font-medium tracking-[-0.04em] tabular-nums leading-none transition-colors
+          ${state === 'recording' ? 'text-ink' : 'text-dim'}`}>
+          {fmt(duration)}
+        </span>
+
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-widest uppercase font-semibold border transition-all
+          ${txnDone
+            ? 'bg-indigov/10 text-indigov border-indigov/25'
+            : 'bg-warm/50 text-dim border-warm/60'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full transition-all ${txnDone ? 'bg-indigov' : 'bg-ghost'}`} />
+          TXN {txnDone ? 'Q' : '—'}
+        </span>
       </div>
 
-      <div className="flex gap-[3px] items-center h-10">
+      {/* Waveform bars */}
+      <div className="flex gap-[3px] items-center h-9">
         {bars.map((h, i) => (
-          <div key={i} className={`w-[3px] rounded-full transition-all ${state === 'recording' ? 'bg-ink' : 'bg-warm'}`}
-            style={{
-              height: state === 'recording' ? h : 4,
-              transitionDuration: state === 'recording' ? '80ms' : '300ms',
-            }} />
+          <div key={i}
+            className={`w-[3px] rounded-full transition-all ${state === 'recording' ? 'bg-indigov' : 'bg-warm'}`}
+            style={{ height: state === 'recording' ? h : 4, transitionDuration: state === 'recording' ? '80ms' : '300ms' }} />
         ))}
       </div>
 
+      {/* Live metrics — recording only */}
       {state === 'recording' && (
-        <div className="w-full space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-dim tracking-widest uppercase">Signal</span>
-            <span className={`font-mono text-[11px] font-medium ${sigTextColor}`}>
-              {sigTier === 'good' ? 'Clear' : sigTier === 'ok' ? 'Acceptable' : 'Too quiet'}
-            </span>
-          </div>
-          <div className="w-full h-1.5 rounded-full bg-warm overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-100 ${sigBarColor}`} style={{ width: sigBarWidth }} />
-          </div>
+        <div className="w-full rounded-xl border border-warm/50 bg-warm/10 divide-y divide-warm/40 overflow-hidden">
+          <AudioMetricRow
+            label="Signal" value={liveDbfs > -55 ? `${liveDbfs.toFixed(1)} dBFS` : '— dBFS'}
+            tier={sigTier} barWidth={`${Math.max(3, ((liveDbfs + 60) / 60) * 100)}%`}
+          />
+          <AudioMetricRow
+            label="SAT" value={`${sal} /min`}
+            tier={salTier} barWidth={`${Math.min(100, sal > 0 ? (sal / 600) * 100 : 2)}%`}
+            hint="≤ 600"
+          />
+          <AudioMetricRow
+            label="SNR" value={snr > 0 ? `${snr} dB` : '—'}
+            tier={snrTier} barWidth={`${Math.min(100, (snr / 40) * 100)}%`}
+            hint="≥ 13 dB"
+          />
+          <AudioMetricRow
+            label="SSL" value={ssl > 0 ? ssl.toFixed(1) : '—'}
+            tier={sslTier} barWidth={`${Math.min(100, (ssl / 5) * 100)}%`}
+            hint="≤ 3.3"
+          />
         </div>
       )}
 
+      {/* Record / Stop button */}
       {state !== 'done' ? (
         <button
           type="button"
           onClick={state === 'idle' ? start : stop}
           className={`w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all shadow-sm
-            ${state === 'recording' ? 'border-ink bg-ink' : 'border-warm bg-paper hover:border-ink hover:shadow-md'}`}>
+            ${state === 'recording'
+              ? 'border-indigov bg-indigov'
+              : 'border-warm bg-paper hover:border-indigov hover:shadow-md'}`}>
           {state === 'idle'
-            ? <div className="w-5 h-5 rounded-full bg-ink" />
+            ? <div className="w-5 h-5 rounded-full bg-indigov" />
             : <div className="w-4 h-4 rounded-sm bg-paper" />
           }
         </button>
@@ -650,38 +721,88 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
             className="flex-1 h-11 rounded-xl border border-warm text-[13px] text-dim hover:text-ink hover:border-ink transition-all">
             Re-record
           </button>
-          <div className="flex-[2] h-11 rounded-xl border border-violet/40 bg-violet/5 text-violet text-[13px] font-semibold flex items-center justify-center gap-2">
+          <div className="flex-[2] h-11 rounded-xl border border-slatebl/40 bg-slatebl/5 text-slatebl text-[13px] font-semibold flex items-center justify-center gap-2">
             <span>✓</span> Recorded
           </div>
         </div>
       )}
 
+      {/* Audio playback */}
       {state === 'done' && value?.blobUrl && (
         <audio controls src={value.blobUrl} className="w-full h-9" />
       )}
 
+      {/* QC summary */}
       {state === 'done' && qcSummary && (
-        <p className={`font-mono text-[11px] ${sumColor}`}>
-          {sumLabel}{sumTier === 'poor' ? ' — try speaking louder or moving to a quieter spot' : ''}
-        </p>
+        <div className="w-full rounded-xl border border-warm/60 bg-warm/15 p-3.5 space-y-2">
+          <div className="flex items-center justify-between pb-2 border-b border-warm/50">
+            <span className={`font-mono text-[11px] font-semibold ${allPass ? 'text-slatebl' : 'text-amber-600'}`}>
+              {allPass ? 'Sounds great' : 'Review quality'}
+            </span>
+            <span className="font-mono text-[10px] text-ghost uppercase tracking-widest">Audio Check</span>
+          </div>
+          <AudioSummaryRow label="SAT" value={`${qcSummary.sal} /min`} pass={qcSummary.sal <= 600} limit="≤ 600 /min" />
+          <AudioSummaryRow label="SNR" value={`${qcSummary.snr} dB`}  pass={qcSummary.snr >= 13}  limit="≥ 13 dB" />
+          <AudioSummaryRow label="SSL" value={qcSummary.ssl.toFixed(1)} pass={qcSummary.ssl <= 3.3} limit="≤ 3.3" />
+          <div className="flex items-center gap-2 pt-2 border-t border-warm/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigov/60 shrink-0" />
+            <span className="font-mono text-[10px] text-dim tracking-wide">Transcription queued on submit</span>
+          </div>
+        </div>
       )}
 
-      <div className="text-center">
+      {/* Duration hints */}
+      <div className="text-center -mt-1">
         {state === 'recording' && !meetsMin && (
-          <p className="font-mono text-[11px] text-dim">{minDuration - duration}s remaining (min {minDuration}s)</p>
+          <p className="font-mono text-[11px] text-dim">{minDuration - duration}s remaining · min {minDuration}s</p>
         )}
         {state === 'recording' && meetsMin && (
-          <p className="font-mono text-[11px] text-violet">Min duration reached — tap stop when ready</p>
+          <p className="font-mono text-[11px] text-slatebl">Min reached — tap stop when ready</p>
         )}
         {state === 'idle' && (
           <p className="font-mono text-[11px] text-dim">Tap to record · Min {minDuration}s · Max {Math.floor(maxDuration / 60)}min</p>
         )}
         {state === 'done' && duration < minDuration && (
-          <p className="font-mono text-[11px] text-amber-600">Too short ({duration}s) — please re-record (min {minDuration}s)</p>
+          <p className="font-mono text-[11px] text-amber-600">Too short ({duration}s) — re-record (min {minDuration}s)</p>
         )}
       </div>
 
       {error && <p className="text-[12px] text-red-500 text-center leading-relaxed">{error}</p>}
+    </div>
+  )
+}
+
+function AudioMetricRow({ label, value, tier, barWidth, hint }: {
+  label: string; value: string; tier: MetricTier; barWidth: string; hint?: string
+}) {
+  const textColor = tier === 'good' ? 'text-slatebl' : tier === 'warn' ? 'text-amber-600' : 'text-red-500'
+  const barColor  = tier === 'good' ? 'bg-slatebl'   : tier === 'warn' ? 'bg-amber-400'  : 'bg-red-400'
+  return (
+    <div className="px-3.5 py-2.5 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[10px] text-ghost tracking-widest uppercase w-10 shrink-0">{label}</span>
+        <span className={`font-mono text-[11px] font-semibold ${textColor} flex-1`}>{value}</span>
+        {hint && <span className="font-mono text-[10px] text-ghost/70 shrink-0">{hint}</span>}
+      </div>
+      <div className="w-full h-[3px] rounded-full bg-warm overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-150 ${barColor}`} style={{ width: barWidth }} />
+      </div>
+    </div>
+  )
+}
+
+function AudioSummaryRow({ label, value, pass, limit }: {
+  label: string; value: string; pass: boolean; limit: string
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className={`shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold
+        ${pass ? 'bg-slatebl/15 text-slatebl' : 'bg-red-100 text-red-500'}`}>
+        {pass ? '✓' : '✗'}
+      </span>
+      <span className="font-mono text-[10px] text-dim w-8 shrink-0">{label}</span>
+      <span className={`font-mono text-[12px] font-semibold ${pass ? 'text-ink' : 'text-red-500'}`}>{value}</span>
+      <span className="font-mono text-[10px] text-ghost ml-auto">{limit}</span>
     </div>
   )
 }

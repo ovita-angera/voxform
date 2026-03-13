@@ -13,6 +13,11 @@ export default {
         mark:         'rgb(var(--mark)         / <alpha-value>)',
         violet:       'rgb(var(--violet)       / <alpha-value>)',
         'violet-dim': 'rgb(var(--violet-dim)   / <alpha-value>)',
+        powder:      'rgb(var(--powder)       / <alpha-value>)',
+        slatebl:     'rgb(var(--slatebl)      / <alpha-value>)',
+        indigov:     'rgb(var(--indigov)      / <alpha-value>)',
+        blackberry:  'rgb(var(--blackberry)   / <alpha-value>)',
+        coffee:      'rgb(var(--coffee)       / <alpha-value>)',
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],

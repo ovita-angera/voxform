@@ -810,7 +810,6 @@ function AudioSummaryRow({ label, value, pass, limit }: {
 // ── Location widget ────────────────────────────────────────────────────────────
 function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
-  const [msg, setMsg] = useState('')
   const loc = value as { lat: number; lng: number; accuracy: number } | null
 
   const capture = useCallback(() => {
@@ -820,39 +819,67 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
         onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
         setState('done')
       },
-      () => { setState('error'); setMsg('Location access denied. Please enable and retry.') },
+      () => setState('error'),
       { enableHighAccuracy: true, timeout: 15000 },
     )
   }, [onChange])
 
   if (state === 'done' && loc) return (
-    <div className="rounded-xl border border-warm p-5">
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-2 h-2 rounded-full bg-violet" />
-        <span className="font-mono text-[12px] text-ink">Location captured</span>
-        <button type="button" onClick={() => { onChange(null); setState('idle') }}
-          className="ml-auto font-mono text-[11px] text-dim hover:text-ink transition-colors">
-          Reset
-        </button>
-      </div>
-      <div className="font-mono text-[12px] text-dim leading-7">
-        <p>{loc.lat.toFixed(6)}, {loc.lng.toFixed(6)}</p>
-        <p>±{Math.round(loc.accuracy)}m accuracy</p>
+    <div className="rounded-xl border border-warm bg-paper p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-indigov/10 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="12" height="16" viewBox="0 0 12 16" fill="none" aria-hidden>
+            <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 11 5 11S11 8.75 11 5c0-2.76-2.24-5-5-5Z" fill="#533A7B"/>
+            <circle cx="6" cy="5" r="2" fill="white"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="font-mono text-[12px] text-ink font-semibold">Location captured</span>
+            <button type="button" onClick={() => { onChange(null); setState('idle') }}
+              className="font-mono text-[11px] text-dim hover:text-red-500 transition-colors shrink-0">
+              Clear
+            </button>
+          </div>
+          <p className="font-mono text-[12px] text-dim tabular-nums">
+            {loc.lat.toFixed(6)}, {loc.lng.toFixed(6)}
+          </p>
+          <p className="font-mono text-[11px] text-ghost mt-0.5">±{Math.round(loc.accuracy)}m accuracy</p>
+        </div>
       </div>
     </div>
   )
 
   return (
-    <div className="rounded-xl border border-warm p-7 text-center">
-      {state === 'error' && <p className="text-[12px] text-red-500 mb-4 leading-relaxed">{msg}</p>}
+    <div className="rounded-xl border border-warm bg-paper p-5 flex flex-col items-center gap-4">
+      <div className="w-11 h-11 rounded-xl bg-indigov/10 flex items-center justify-center">
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="none" aria-hidden>
+          <path d="M8 0C4.69 0 2 2.69 2 6c0 4.5 6 14 6 14S14 10.5 14 6c0-3.31-2.69-6-6-6Z"
+            fill={state === 'loading' ? '#6969B3' : state === 'error' ? '#EF4444' : '#533A7B'}
+            opacity={state === 'loading' ? 0.5 : 1}/>
+          <circle cx="8" cy="6" r="2.5" fill="white"/>
+        </svg>
+      </div>
+      {state === 'error' && (
+        <p className="text-[12px] text-red-500 text-center leading-relaxed">
+          Location access denied — please allow in browser settings and retry.
+        </p>
+      )}
       <button type="button" onClick={capture} disabled={state === 'loading'}
-        className={`h-13 px-7 rounded-xl font-sans font-semibold text-[14px] border transition-all
+        className={`w-full h-12 rounded-xl font-sans font-semibold text-[14px] border transition-all flex items-center justify-center gap-2
           ${state === 'loading'
-            ? 'border-warm text-dim cursor-not-allowed'
-            : 'border-ink bg-ink text-paper hover:opacity-85 cursor-pointer shadow-sm'}`}
-        style={{ height: 52 }}>
-        {state === 'loading' ? 'Locating…' : '⊕ Capture location'}
+            ? 'border-warm text-dim cursor-not-allowed bg-warm/30'
+            : state === 'error'
+              ? 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer'
+              : 'border-indigov bg-indigov text-paper hover:opacity-85 cursor-pointer shadow-sm'}`}>
+        {state === 'loading'
+          ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-dim/40 border-t-dim animate-spin" />Locating…</>
+          : state === 'error' ? 'Retry' : 'Capture location'
+        }
       </button>
+      {state === 'idle' && (
+        <p className="font-mono text-[11px] text-ghost">Uses GPS / network positioning</p>
+      )}
     </div>
   )
 }

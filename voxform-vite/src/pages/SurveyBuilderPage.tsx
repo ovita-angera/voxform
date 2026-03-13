@@ -284,6 +284,7 @@ export function SurveyBuilderPage() {
         <TabsList className="shrink-0 px-4">
           <TabsTrigger value="create">Create</TabsTrigger>
           <TabsTrigger value="share">Share</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="responses">Responses</TabsTrigger>
         </TabsList>
 
@@ -712,6 +713,141 @@ export function SurveyBuilderPage() {
                 <p className="text-[13px] text-dim">Publish the survey first to access sharing options.</p>
               </div>
             )}
+          </div>
+        </TabsContent>
+
+        {/* ── PREVIEW TAB ──────────────────────────────────────────────────── */}
+        <TabsContent value="preview" className="flex-1 overflow-auto m-0">
+          <div className="min-h-full bg-warm/20 flex flex-col items-center py-8 px-4 gap-3">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-1">
+              <p className="font-mono text-[11px] text-dim uppercase tracking-widest">Respondent view</p>
+              <span className="font-mono text-[10px] bg-warm border border-warm/80 px-2 py-0.5 rounded text-dim">
+                {questions.length} question{questions.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Phone frame */}
+            <div className="relative shrink-0" style={{ width: 310 }}>
+              {/* Side buttons */}
+              <div className="absolute -left-[5px] top-[72px] w-[4px] h-8 bg-ink/20 rounded-l-sm" />
+              <div className="absolute -left-[5px] top-[112px] w-[4px] h-7 bg-ink/20 rounded-l-sm" />
+              <div className="absolute -right-[5px] top-[92px] w-[4px] h-11 bg-ink/20 rounded-r-sm" />
+
+              {/* Shell */}
+              <div className="rounded-[36px] border-[8px] border-ink/80 bg-paper overflow-hidden shadow-2xl">
+
+                {/* Status bar + notch */}
+                <div className="relative bg-paper flex items-center justify-between px-5 pt-2 pb-1">
+                  <span className="font-mono text-[9px] text-ink/50 tabular-nums">9:41</span>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-[3px] w-[54px] h-[14px] bg-ink rounded-full" />
+                  <div className="flex items-center gap-0.5 opacity-40">
+                    <div className="w-3 h-1.5 border border-ink rounded-[2px] relative">
+                      <div className="absolute inset-[1px] bg-ink rounded-[1px]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar — 0% on preview */}
+                <div className="h-[2px] bg-warm/60 mx-0">
+                  <div className="h-full bg-violet/30 w-0" />
+                </div>
+
+                {/* Scrollable screen content */}
+                <div className="overflow-y-auto overscroll-contain" style={{ height: 580 }}>
+                  {questions.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-3 px-6">
+                      <div className="w-10 h-10 rounded-2xl bg-violet/10 flex items-center justify-center">
+                        <Plus size={18} className="text-violet" />
+                      </div>
+                      <p className="font-mono text-[11px] text-dim text-center">
+                        Add questions to see the preview
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Intro card */}
+                      <div className="px-5 pt-6 pb-5 border-b border-warm/60">
+                        <p className="font-mono text-[9px] text-dim tracking-[0.12em] uppercase mb-3">Voxform</p>
+                        <h2 className="font-serif text-[17px] leading-tight tracking-tight text-ink mb-2">
+                          {surveyTitle || 'Untitled survey'}
+                        </h2>
+                        {survey?.description && (
+                          <p className="text-[11px] text-dim leading-relaxed mb-3">{survey.description}</p>
+                        )}
+                        <div className="flex gap-4 mt-3">
+                          {[
+                            [String(questions.length), 'questions'],
+                            ['WAV', '16kHz'],
+                            ['QC', 'enabled'],
+                          ].map(([v, l]) => (
+                            <div key={l} className="border-l-2 border-warm pl-2">
+                              <p className="font-serif text-[11px] font-semibold text-ink">{v}</p>
+                              <p className="font-mono text-[8px] text-dim">{l}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4 h-9 rounded-lg border border-warm bg-warm/30 flex items-center justify-center">
+                          <span className="text-[12px] text-dim font-medium">Begin survey →</span>
+                        </div>
+                      </div>
+
+                      {/* All questions */}
+                      {questions.map((q, i) => {
+                        const info = getTypeInfo(q.type)
+                        const Icon = info?.icon
+                        return (
+                          <div key={q.id} className="px-5 py-4 border-b border-warm/40">
+                            <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                              <span className="font-mono text-[9px] text-dim tracking-widest">
+                                {String(i + 1).padStart(2, '0')} —
+                              </span>
+                              <span className={cn(
+                                'inline-flex items-center gap-1 px-1.5 py-[2px] rounded text-[9px] font-mono',
+                                info?.iconColor ?? 'bg-violet/10 text-violet',
+                              )}>
+                                {Icon && <Icon size={8} />}
+                                {info?.label ?? q.type.replace(/_/g, ' ')}
+                              </span>
+                              {q.required && (
+                                <span className="text-violet text-[10px] font-serif leading-none">*</span>
+                              )}
+                            </div>
+                            <h3 className="font-serif text-[14px] leading-snug tracking-tight text-ink mb-1">
+                              {q.title || <span className="text-ghost italic">Untitled question</span>}
+                            </h3>
+                            {q.description && (
+                              <p className="text-[10px] text-dim mb-2 leading-relaxed">{q.description}</p>
+                            )}
+                            <div className="mt-2">
+                              <QuestionPreview q={q} />
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {/* Submit */}
+                      <div className="px-5 py-5">
+                        <div className="h-10 rounded-lg border border-warm bg-warm/40 flex items-center justify-center">
+                          <span className="text-[12px] text-dim font-semibold">Submit</span>
+                        </div>
+                        <p className="text-center font-mono text-[9px] text-ghost mt-2">
+                          Responses recorded securely
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Home indicator */}
+                <div className="flex justify-center py-2 bg-paper border-t border-warm/20">
+                  <div className="w-20 h-[3px] bg-ink/15 rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            <p className="font-mono text-[10px] text-dim/50">scroll inside to see all {questions.length} question{questions.length !== 1 ? 's' : ''}</p>
           </div>
         </TabsContent>
 

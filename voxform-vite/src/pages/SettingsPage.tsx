@@ -46,7 +46,7 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center justify-between py-2">
               <span className="text-[13px] text-dim">Current plan</span>
-              <span className="text-[13px] font-mono font-medium bg-ink text-paper px-2 py-0.5">{user?.org?.plan}</span>
+              <span className="text-[13px] font-mono font-medium bg-ink text-paper px-2 py-0.5 rounded-sm">{user?.org?.plan}</span>
             </div>
           </div>
         </div>

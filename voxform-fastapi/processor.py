@@ -50,25 +50,38 @@ async def process(job: Job) -> None:
         {"id": job_id},
     )
 
-    # Convert to WAV if not already
+    # Read sample rate from question options (set in survey builder)
+    sample_rate = 16000
+    q_row = await db.fetch_one(
+        "SELECT options FROM questions WHERE id = ("
+        "SELECT question_id FROM responses WHERE id = :rid LIMIT 1"
+        ") LIMIT 1",
+        {"rid": response_id},
+    )
+    if q_row:
+        try:
+            opts = json.loads(q_row["options"] or "{}")
+            sample_rate = int(opts.get("sampleRateHz", 16000))
+        except Exception:
+            pass
+
+    # Keep original file for playback; convert a separate copy for Groq transcription
+    original_path = wav_path
+    transcribe_path = wav_path
     if wav_path and not wav_path.endswith(".wav"):
         try:
-            wav_path = await _convert_to_wav(wav_path)
-            await db.execute(
-                "UPDATE audio_jobs SET wav_path = :p, updated_at = NOW() WHERE id = :id",
-                {"p": wav_path, "id": job_id},
-            )
+            transcribe_path = await _convert_to_wav(wav_path, sample_rate)
         except Exception as exc:
             logger.warning("ffmpeg unavailable — proceeding with original: %s", exc)
 
     # Transcription
-    if config.GROQ_API_KEY and wav_path and os.path.exists(wav_path):
+    if config.GROQ_API_KEY and transcribe_path and os.path.exists(transcribe_path):
         await db.execute(
             "UPDATE audio_jobs SET status = 'TRANSCRIBING', updated_at = NOW() WHERE id = :id",
             {"id": job_id},
         )
         try:
-            transcript = await _transcribe_groq(wav_path)
+            transcript = await _transcribe_groq(transcribe_path)
             t_json = json.dumps(transcript)
             await db.execute(
                 "UPDATE audio_jobs SET transcript_raw = :t, updated_at = NOW() WHERE id = :id",
@@ -104,10 +117,11 @@ async def process(job: Job) -> None:
         except Exception as exc:
             logger.warning("transcription failed — skipping: %s", exc)
 
-    # Build public URL for the final audio file and write it back to responses
-    if wav_path and os.path.exists(wav_path):
+    # Build public URL from the original recording (not the downsampled transcription copy)
+    playback_path = original_path if original_path and os.path.exists(original_path) else transcribe_path
+    if playback_path and os.path.exists(playback_path):
         storage_abs = os.path.abspath(config.STORAGE_PATH)
-        wav_abs = os.path.abspath(wav_path)
+        wav_abs = os.path.abspath(playback_path)
         try:
             rel = os.path.relpath(wav_abs, storage_abs).replace(os.sep, "/")
             public_url = f"{config.STORAGE_URL}/{rel}"
@@ -132,12 +146,12 @@ async def process(job: Job) -> None:
     logger.info("audio pipeline complete: %s (%dms)", response_id, processing_ms)
 
 
-async def _convert_to_wav(input_path: str) -> str:
+async def _convert_to_wav(input_path: str, sample_rate: int = 16000) -> str:
     stem = Path(input_path).with_suffix("").as_posix()
-    output_path = stem + ".wav"
+    output_path = f"{stem}_{sample_rate}.wav"
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg", "-i", input_path,
-        "-ar", "16000", "-ac", "1", "-sample_fmt", "s16",
+        "-ar", str(sample_rate), "-ac", "1", "-sample_fmt", "s16",
         output_path, "-y",
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.PIPE,

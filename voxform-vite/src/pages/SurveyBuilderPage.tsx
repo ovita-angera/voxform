@@ -6,7 +6,7 @@ import {
   CalendarDays, Phone, ToggleLeft, CheckSquare, ChevronDown,
   Grid3X3, Upload, AlignJustify, Star, FileText, LayoutTemplate,
   Copy, ExternalLink, QrCode, Trash2, ChevronRight, Plus,
-  Check, Loader2, Search, X, ChevronLeft, ChevronUp, Play, Pause, List,
+  Check, Loader2, Search, X, ChevronLeft, ChevronUp, Play, Pause, List, MapPin,
 } from 'lucide-react'
 import { api } from '@/lib/api/client'
 import { StatusDot } from '@/components/ui'
@@ -29,6 +29,7 @@ const Q_CATEGORIES = [
       { type: 'DATE',              icon: CalendarDays,   label: 'Date',              desc: 'Date picker input' },
       { type: 'PHONE',             icon: Phone,          label: 'Phone',             desc: 'Phone number with formatting' },
       { type: 'LONG_TEXT',         icon: FileText,       label: 'Long Text',         desc: 'Multi-line paragraph answer' },
+      { type: 'LOCATION',          icon: MapPin,         label: 'Location GPS',      desc: 'Capture precise GPS coordinates' },
     ],
   },
   {
@@ -259,10 +260,9 @@ export function SurveyBuilderPage() {
         <StatusDot status={survey?.status ?? 'DRAFT'} />
         <div className="flex items-center gap-2 shrink-0">
           {survey?.status === 'ACTIVE' && (
-            <a href={shareUrl} target="_blank" rel="noopener noreferrer">
-              <button className="h-8 px-3 text-[13px] font-medium text-dim hover:text-ink border border-warm hover:border-ink rounded-lg transition-all inline-flex items-center gap-1.5">
-                <ExternalLink size={13} />Preview
-              </button>
+            <a href={shareUrl} target="_blank" rel="noopener noreferrer"
+              className="h-8 px-3 text-[13px] font-medium text-dim hover:text-ink border border-warm hover:border-ink rounded-lg transition-all inline-flex items-center gap-1.5">
+              <ExternalLink size={13} />Preview
             </a>
           )}
           <button
@@ -490,7 +490,7 @@ export function SurveyBuilderPage() {
                       )}
                       <button
                         onClick={handleDeleteQ}
-                        className="h-7 w-7 flex items-center justify-center rounded-lg text-dim hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="h-7 w-7 flex items-center justify-center rounded-lg text-dim hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -651,7 +651,7 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── SHARE TAB ────────────────────────────────────────────────────── */}
-        <TabsContent value="share" className="overflow-auto">
+        <TabsContent value="share" className="h-[calc(100vh-96px)] overflow-y-auto m-0">
           <div className="max-w-lg mx-auto px-8 py-10 space-y-6">
             <div>
               <h2 className="font-serif text-[24px] tracking-tight text-ink mb-1">Share survey</h2>
@@ -717,8 +717,8 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── PREVIEW TAB ──────────────────────────────────────────────────── */}
-        <TabsContent value="preview" className="flex-1 overflow-auto m-0">
-          <div className="min-h-full bg-warm/20 flex flex-col items-center py-8 px-4 gap-3">
+        <TabsContent value="preview" className="h-[calc(100vh-96px)] overflow-y-auto m-0 bg-warm/20">
+          <div className="flex flex-col items-center pt-4 pb-8 px-4 gap-3">
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-1">
@@ -852,7 +852,7 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── RESPONSES TAB ────────────────────────────────────────────────── */}
-        <TabsContent value="responses" className="overflow-auto">
+        <TabsContent value="responses" className="h-[calc(100vh-96px)] overflow-y-auto m-0">
           <SurveyResponses surveyId={id ?? ''} surveySlug={survey?.slug ?? ''} />
         </TabsContent>
       </Tabs>
@@ -995,7 +995,7 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
   }
 
   if (q.type === 'VOICE_RESPONSE' || q.type === 'AUDIO_CAPTURE' || q.type === 'AUDIO_QUESTION') {
-    const opts = q.options as { minDurationSec?: number; maxDurationSec?: number; minDbfs?: number; minSnrDb?: number } | undefined
+    const opts = q.options as { minDurationSec?: number; maxDurationSec?: number; minDbfs?: number; minSnrDb?: number; sampleRateHz?: number; satLimit?: number } | undefined
     return (
       <div className="space-y-4">
         <div className="h-px bg-warm" />
@@ -1010,6 +1010,21 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
           <input type="number" className={fieldCls}
             value={opts?.maxDurationSec ?? 300} min={30}
             onChange={e => setOpts({ maxDurationSec: Number(e.target.value) })} />
+        </div>
+        <div>
+          <label className={labelCls}>Sample rate</label>
+          <div className="flex rounded-lg border border-warm overflow-hidden">
+            {[{ hz: 8000, label: '8 kHz' }, { hz: 16000, label: '16 kHz' }, { hz: 32000, label: '32 kHz' }].map(f => (
+              <button key={f.hz} type="button" onClick={() => setOpts({ sampleRateHz: f.hz })}
+                className={cn(
+                  'flex-1 py-2 text-[12px] font-mono transition-colors border-r border-warm last:border-r-0',
+                  (opts?.sampleRateHz ?? 16000) === f.hz ? 'bg-violet text-white' : 'text-dim hover:text-ink hover:bg-warm/40',
+                )}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-dim mt-1">16 kHz is optimal for Groq Whisper transcription.</p>
         </div>
         <div className="h-px bg-warm" />
         <p className="text-[10px] font-mono text-dim uppercase tracking-widest">Quality thresholds</p>
@@ -1026,6 +1041,13 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
             value={opts?.minSnrDb ?? 15} min={0} max={60}
             onChange={e => setOpts({ minSnrDb: Number(e.target.value) })} />
           <p className="text-[10px] text-dim mt-1">How clean the recording must be. 15 dB is a good default; lower = more lenient.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Saturation limit (/min)</label>
+          <input type="number" className={fieldCls}
+            value={opts?.satLimit ?? 600} min={0} max={3000}
+            onChange={e => setOpts({ satLimit: Number(e.target.value) })} />
+          <p className="text-[10px] text-dim mt-1">Max clipping events per minute. 600 is a good default; higher = more lenient.</p>
         </div>
       </div>
     )
@@ -1234,9 +1256,57 @@ function QuestionPreview({ q }: { q: Question }) {
       <p className="text-[12px] font-mono text-dim">Tap to record video</p>
     </div>
   )
+  if (q.type === 'SHORT_TEXT' || q.type === 'EMAIL' || q.type === 'PHONE') return (
+    <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px]">
+      {q.type === 'EMAIL' ? 'your@email.com' : q.type === 'PHONE' ? '+1 (555) 000-0000' : 'Your answer…'}
+    </div>
+  )
+  if (q.type === 'LONG_TEXT') return (
+    <div className="h-24 border border-warm rounded-xl px-4 py-3 text-dim text-[13px]">Your answer…</div>
+  )
+  if (q.type === 'DATE') return (
+    <div className="h-11 border border-warm rounded-lg flex items-center gap-2 px-4 text-dim text-[13px] font-mono">
+      <CalendarDays size={13} className="opacity-40" />MM / DD / YYYY
+    </div>
+  )
+  if (q.type === 'LOCATION') return (
+    <div className="rounded-xl border border-warm bg-warm/5 p-4 flex flex-col items-center gap-3">
+      <div className="w-9 h-9 rounded-lg bg-violet/10 flex items-center justify-center">
+        <MapPin size={16} className="text-violet" />
+      </div>
+      <div className="h-9 rounded-lg bg-warm/60 border border-warm w-full flex items-center justify-center text-[12px] text-dim font-medium">
+        Capture location
+      </div>
+      <p className="text-[10px] font-mono text-ghost">GPS · ±20 m target accuracy</p>
+    </div>
+  )
+  if (q.type === 'NPS') {
+    const pts = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    return (
+      <div>
+        <div className="flex gap-1 flex-wrap">
+          {pts.map(v => (
+            <div key={v} className="flex-1 min-w-[22px] h-9 border border-warm rounded-lg flex items-center justify-center font-mono text-[11px] text-dim">
+              {v}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between mt-1.5 text-[10px] font-mono text-dim">
+          <span>Not likely</span><span>Very likely</span>
+        </div>
+      </div>
+    )
+  }
+  if (q.type === 'SECTION_BREAK') return (
+    <div className="flex items-center gap-3 my-1">
+      <div className="flex-1 h-px bg-warm" />
+      <span className="text-[10px] font-mono text-ghost uppercase tracking-widest">Section break</span>
+      <div className="flex-1 h-px bg-warm" />
+    </div>
+  )
   return (
-    <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px] font-mono">
-      {q.type.replace(/_/g, ' ').toLowerCase()}
+    <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px]">
+      Your answer…
     </div>
   )
 }
@@ -1318,7 +1388,7 @@ function SurveyResponses({ surveyId }: { surveyId: string; surveySlug: string })
   const audioCount = allResponses.filter(r => AUDIO_Q_TYPES.has(r.type)).length
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-4xl mx-auto px-6 pt-6 pb-8">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="font-serif text-[24px] tracking-tight text-ink">Responses</h2>
@@ -1329,7 +1399,7 @@ function SurveyResponses({ surveyId }: { surveyId: string; surveySlug: string })
             </p>
           )}
         </div>
-        <Link to="/responses">
+        <Link to={`/responses?surveyId=${surveyId}`}>
           <button className="h-8 px-3 text-[13px] font-medium rounded-lg border border-warm text-dim hover:text-ink hover:border-ink transition-all inline-flex items-center gap-1.5">
             View all <ChevronRight size={13} />
           </button>

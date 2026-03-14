@@ -51,7 +51,7 @@ function SidebarContents({ onNav }: { onNav?: () => void }) {
       <div className="border-t border-warm p-4 space-y-3 shrink-0">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-mono text-dim truncate">{user?.org?.name}</span>
-          <span className="text-[10px] font-mono font-medium bg-ink text-paper px-1.5 py-0.5 shrink-0">{user?.org?.plan}</span>
+          <span className="text-[10px] font-mono font-medium bg-ink text-paper px-1.5 py-0.5 rounded-sm shrink-0">{user?.org?.plan}</span>
         </div>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-violet/20 border border-violet/30 flex items-center justify-center text-[11px] font-medium text-violet shrink-0">

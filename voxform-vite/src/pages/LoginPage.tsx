@@ -40,7 +40,7 @@ export function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-[13px] text-red-600 py-2.5 px-4 border border-red-200 bg-red-50">{error}</p>
+          <p className="text-[13px] text-red-600 py-2.5 px-4 rounded-lg border border-red-200 bg-red-50">{error}</p>
         )}
 
         <Btn type="submit" className="w-full" disabled={loading} size="lg">

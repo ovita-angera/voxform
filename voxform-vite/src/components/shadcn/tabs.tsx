@@ -37,7 +37,7 @@ const TabsContent = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content ref={ref} className={cn('flex-1 overflow-hidden', className)} {...props} />
+  <TabsPrimitive.Content ref={ref} className={cn('flex-1 overflow-hidden outline-none', className)} {...props} />
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
 

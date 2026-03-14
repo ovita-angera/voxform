@@ -8,13 +8,13 @@ interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Btn({ variant = 'solid', size = 'md', className = '', children, ...props }: BtnProps) {
-  const base = 'inline-flex items-center justify-center font-sans font-medium leading-none transition-all focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed'
+  const base = 'inline-flex items-center justify-center rounded-lg font-sans font-medium leading-none transition-all focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed'
   const sizes = { sm: 'h-8 px-3 text-[13px]', md: 'h-10 px-5 text-[14px]', lg: 'h-12 px-7 text-[15px]' }
   const variants = {
     solid:   'bg-ink text-paper hover:bg-mark border border-ink',
     outline: 'bg-transparent text-ink border border-warm hover:border-ink hover:bg-warm',
     ghost:   'bg-transparent text-dim hover:text-ink hover:bg-warm border border-transparent',
-    violet:  'bg-violet text-paper hover:bg-violet-dim border border-violet',
+    violet:  'bg-violet text-paper hover:opacity-90 border border-violet',
   }
   return (
     <button className={cn(base, sizes[size], variants[variant], className)} {...props}>
@@ -32,7 +32,7 @@ export function Input({ label, error, className = '', ...props }: InputProps) {
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-[12px] font-medium text-dim uppercase tracking-wider font-mono">{label}</label>}
       <input
-        className={cn('h-11 px-4 bg-paper border rounded-none text-ink text-[14px] font-sans placeholder:text-ghost focus:outline-none focus:border-ink transition-colors', error ? 'border-red-400' : 'border-warm', className)}
+        className={cn('h-11 px-4 bg-paper border rounded-lg text-ink text-[14px] font-sans placeholder:text-ghost focus:outline-none focus:border-ink transition-colors', error ? 'border-red-400' : 'border-warm', className)}
         {...props}
       />
       {error && <span className="text-[12px] text-red-500">{error}</span>}
@@ -46,7 +46,7 @@ export function Textarea({ label, className = '', ...props }: TAProps) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-[12px] font-medium text-dim uppercase tracking-wider font-mono">{label}</label>}
-      <textarea className={cn('px-4 py-3 bg-paper border border-warm rounded-none text-ink text-[14px] font-sans placeholder:text-ghost focus:outline-none focus:border-ink transition-colors resize-none', className)} {...props} />
+      <textarea className={cn('px-4 py-3 bg-paper border border-warm rounded-lg text-ink text-[14px] font-sans placeholder:text-ghost focus:outline-none focus:border-ink transition-colors resize-none', className)} {...props} />
     </div>
   )
 }
@@ -57,9 +57,9 @@ export function Badge({ color = 'warm', children }: { color?: BadgeColor; childr
   const c: Record<BadgeColor, string> = {
     ink:    'bg-ink text-paper',
     warm:   'bg-warm text-dim',
-    green:  'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    amber:  'bg-amber-50 text-amber-700 border border-amber-200',
-    red:    'bg-red-50 text-red-600 border border-red-200',
+    green:  'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40',
+    amber:  'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/40',
+    red:    'bg-red-50 text-red-600 border border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/40',
     violet: 'bg-violet/10 text-violet border border-violet/30',
   }
   return <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium tracking-wide rounded-full', c[color])}>{children}</span>

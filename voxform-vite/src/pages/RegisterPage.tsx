@@ -63,7 +63,7 @@ export function RegisterPage() {
           <Input label="Organisation name" type="text" value={form.orgName} onChange={set('orgName')} placeholder="Nairobi Research Institute" required autoFocus />
         )}
 
-        {error && <p className="text-[13px] text-red-600 py-2.5 px-4 border border-red-200 bg-red-50">{error}</p>}
+        {error && <p className="text-[13px] text-red-600 py-2.5 px-4 rounded-lg border border-red-200 bg-red-50">{error}</p>}
 
         <div className="flex gap-3">
           {step === 2 && (

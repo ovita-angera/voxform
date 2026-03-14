@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp, Mic, Play, Pause } from 'lucide-react'
+import { ChevronDown, ChevronUp, Mic, Play, Pause, Download } from 'lucide-react'
 import { api } from '@/lib/api/client'
 import { Badge, Skeleton, Empty } from '@/components/ui'
 import { cn } from '@/lib/utils/cn'
@@ -304,11 +305,76 @@ function SessionDetail({
   )
 }
 
+// ── Export helpers ─────────────────────────────────────────────────────────────
+function csvCell(v: unknown): string {
+  const s = String(v ?? '').replace(/"/g, '""')
+  return `"${s}"`
+}
+
+function exportCsv(
+  surveyTitle: string,
+  questions: Question[],
+  sessions: Session[],
+  responses: ResponseRow[],
+) {
+  const bySession: Record<string, Record<string, ResponseRow>> = {}
+  for (const r of responses) {
+    if (!bySession[r.session_id]) bySession[r.session_id] = {}
+    bySession[r.session_id][r.question_id] = r
+  }
+
+  const headers = ['session_id', 'date', 'status', ...questions.map(q => q.title)]
+  const rows = [headers.map(csvCell).join(',')]
+
+  for (const sess of sessions) {
+    const rm = bySession[sess.id] ?? {}
+    const cols = questions.map(q => {
+      const r = rm[q.id]
+      if (!r) return ''
+      if (AUDIO_TYPES.has(r.type)) return r.audio_url ?? r.audio_wav_url ?? ''
+      return r.text_value ?? ''
+    })
+    rows.push([sess.id, new Date(sess.created_at).toISOString(), sess.status, ...cols].map(csvCell).join(','))
+  }
+
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${surveyTitle.replace(/\s+/g, '_')}_responses.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function downloadZip(surveyId: string, surveyTitle: string) {
+  const token = localStorage.getItem('accessToken') ?? ''
+  fetch(`/api/v1/responses/export/zip?surveyId=${surveyId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then(r => r.ok ? r.blob() : Promise.reject(r.status))
+    .then(blob => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${surveyTitle.replace(/\s+/g, '_')}_export.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+    })
+    .catch(err => alert(`Export failed: ${err}`))
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export function ResponsesPage() {
   const qc = useQueryClient()
-  const [surveyId, setSurveyId] = useState('')
+  const [searchParams] = useSearchParams()
+  const [surveyId, setSurveyId] = useState(searchParams.get('surveyId') ?? '')
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
+
+  // Sync if the URL param changes (e.g. browser back/forward)
+  useEffect(() => {
+    const id = searchParams.get('surveyId')
+    if (id) setSurveyId(id)
+  }, [searchParams])
 
   const { data: surveysData } = useQuery({
     queryKey: ['surveys-select'],
@@ -379,15 +445,41 @@ export function ResponsesPage() {
             </p>
           )}
         </div>
-        <select
-          title="Select survey"
-          className="h-9 pl-3 pr-8 rounded-lg border border-warm bg-paper text-[13px] text-ink focus:outline-none focus:border-violet transition-colors shrink-0"
-          value={surveyId}
-          onChange={e => { setSurveyId(e.target.value); setOpenSessionId(null) }}
-        >
-          <option value="">Select a survey…</option>
-          {surveys.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-        </select>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {surveyId && sessions.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const s = surveys.find(sv => sv.id === surveyId)
+                  exportCsv(s?.title ?? surveyId, sortedQuestions, sessions, responses)
+                }}
+                className="h-9 px-3 rounded-lg border border-warm text-[12px] font-mono text-dim hover:text-ink hover:border-ink transition-all inline-flex items-center gap-1.5"
+              >
+                <Download size={12} /> CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const s = surveys.find(sv => sv.id === surveyId)
+                  downloadZip(surveyId, s?.title ?? surveyId)
+                }}
+                className="h-9 px-3 rounded-lg border border-warm text-[12px] font-mono text-dim hover:text-ink hover:border-ink transition-all inline-flex items-center gap-1.5"
+              >
+                <Download size={12} /> ZIP
+              </button>
+            </>
+          )}
+          <select
+            title="Select survey"
+            className="h-9 pl-3 pr-8 rounded-lg border border-warm bg-paper text-[13px] text-ink focus:outline-none focus:border-violet transition-colors"
+            value={surveyId}
+            onChange={e => { setSurveyId(e.target.value); setOpenSessionId(null) }}
+          >
+            <option value="">Select a survey…</option>
+            {surveys.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+          </select>
+        </div>
       </div>
 
       {!surveyId ? (

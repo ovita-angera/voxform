@@ -161,7 +161,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-paper text-ink font-sans">
       {/* ── Nav ── */}
-      <nav className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-warm/60">
+      <nav className="sticky top-0 z-40 h-16 flex items-center justify-between px-4 sm:px-8 border-b border-warm/60 bg-paper/95 backdrop-blur-sm">
         <span className="font-serif text-[20px] tracking-tight text-ink">voxform</span>
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-[13px] text-dim hover:text-ink font-mono transition-colors">Sign in</Link>
@@ -173,8 +173,8 @@ export function LandingPage() {
 
       {/* ── Hero ── */}
       <section className="max-w-4xl mx-auto px-4 sm:px-8 pt-16 sm:pt-24 pb-14 sm:pb-20 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 border border-violet/30 bg-violet/5 text-[11px] font-mono text-violet uppercase tracking-widest mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-violet" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet/30 bg-violet/5 text-[11px] font-mono text-violet uppercase tracking-widest mb-8">
+          <span className="w-1.5 h-1.5 rounded-full bg-violet animate-pulse" />
           Audio-native survey platform
         </div>
         <h1 className="font-serif text-[clamp(40px,7vw,72px)] leading-[1.05] tracking-tight text-ink mb-6">
@@ -194,15 +194,15 @@ export function LandingPage() {
         </div>
 
         {/* Stat strip */}
-        <div className="mt-16 grid grid-cols-3 gap-px bg-warm border border-warm max-w-lg mx-auto">
+        <div className="mt-16 grid grid-cols-3 gap-px bg-warm/60 border border-warm rounded-2xl overflow-hidden max-w-lg mx-auto shadow-sm">
           {[
             ['WAV', '16 kHz lossless'],
             ['Free', 'Groq Whisper tier'],
             ['16', 'question types'],
           ].map(([val, lbl]) => (
-            <div key={lbl} className="bg-paper px-5 py-4 text-center">
-              <p className="font-serif text-[22px] text-ink">{val}</p>
-              <p className="font-mono text-[10px] text-dim uppercase tracking-wider mt-0.5">{lbl}</p>
+            <div key={lbl} className="bg-paper px-5 py-5 text-center">
+              <p className="font-serif text-[24px] text-ink leading-none">{val}</p>
+              <p className="font-mono text-[10px] text-dim uppercase tracking-wider mt-1.5">{lbl}</p>
             </div>
           ))}
         </div>
@@ -244,7 +244,7 @@ export function LandingPage() {
             {INPUT_TYPES.map(t => {
               const Icon = t.icon
               return (
-                <div key={t.label} className="flex flex-col items-center gap-2 px-3 py-4 border border-warm bg-paper hover:border-violet hover:bg-violet/5 transition-all group cursor-default">
+                <div key={t.label} className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl border border-warm bg-paper hover:border-violet hover:bg-violet/5 hover:shadow-sm transition-all group cursor-default">
                   <Icon size={18} className="text-dim group-hover:text-violet transition-colors" />
                   <span className="text-[11px] font-mono text-dim group-hover:text-ink transition-colors text-center leading-tight">{t.label}</span>
                 </div>
@@ -256,11 +256,12 @@ export function LandingPage() {
 
       {/* ── CTA strip ── */}
       <section className="border-t border-warm bg-ink text-paper">
-        <div className="max-w-2xl mx-auto px-4 sm:px-8 py-12 sm:py-16 text-center space-y-6">
-          <h2 className="font-serif text-[36px] tracking-tight leading-tight">
-            Ready to capture better data?
+        <div className="max-w-2xl mx-auto px-4 sm:px-8 py-14 sm:py-20 text-center space-y-6">
+          <p className="font-mono text-[11px] text-ghost/60 uppercase tracking-widest">Get started today</p>
+          <h2 className="font-serif text-[clamp(28px,5vw,44px)] tracking-tight leading-[1.1]">
+            Ready to capture<br />better data?
           </h2>
-          <p className="text-[14px] text-ghost leading-relaxed">
+          <p className="text-[14px] text-ghost leading-relaxed max-w-xs mx-auto">
             Free to start. No credit card required. Works offline.
           </p>
           <Link to="/register">

@@ -249,7 +249,7 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
     <div className="min-h-full flex flex-col max-w-[520px] mx-auto question-enter">
       <div className="flex-1 p-8 pt-8">
         <p className="font-mono text-[11px] text-dim tracking-[0.1em] mb-5 uppercase">
-          {String(index).padStart(2, '0')} — {question.type.replace(/_/g, ' ')}
+          {String(index).padStart(2, '0')} — {question.type.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
           {!!question.required && <span className="ml-1.5 text-dim">*</span>}
         </p>
         <h2 className="font-serif text-[clamp(22px,5vw,28px)] leading-[1.2] tracking-tight text-ink mb-2">
@@ -287,6 +287,78 @@ function QuestionScreen({ question, index, total, value, onChange, canProceed, s
 function SectionBreakInput({ onChange }: { onChange: (v: unknown) => void }) {
   useEffect(() => { onChange('__break__') }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="h-0.5 bg-warm my-2" />
+}
+
+function FileUploadWidget({ accept, maxMb, file, onChange }: {
+  accept: string; maxMb: number; file: File | null; onChange: (v: unknown) => void
+}) {
+  const [error, setError] = useState('')
+  const [dragging, setDragging] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function handleFile(f: File) {
+    if (f.size > maxMb * 1024 * 1024) {
+      setError(`File too large — max ${maxMb} MB`)
+      return
+    }
+    setError('')
+    onChange(f)
+  }
+
+  function fmt(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  if (file) {
+    return (
+      <div className="w-full rounded-xl border border-warm bg-paper p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-warm/60 flex items-center justify-center shrink-0">
+          <span className="font-mono text-[10px] text-dim uppercase">
+            {file.name.split('.').pop()?.slice(0, 4) ?? 'FILE'}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] text-ink font-medium truncate">{file.name}</p>
+          <p className="font-mono text-[11px] text-dim">{fmt(file.size)}</p>
+        </div>
+        <button type="button"
+          onClick={() => { setError(''); onChange(null) }}
+          className="font-mono text-[11px] text-dim hover:text-ink transition-colors px-2 py-1 rounded-lg hover:bg-warm/50">
+          Remove
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <button type="button"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => {
+          e.preventDefault(); setDragging(false)
+          const f = e.dataTransfer.files[0]
+          if (f) handleFile(f)
+        }}
+        className={`w-full rounded-xl border-2 border-dashed py-10 flex flex-col items-center gap-3 transition-all
+          ${dragging ? 'border-ink bg-ink/5' : 'border-warm hover:border-ink/40 hover:bg-warm/20'}`}>
+        <div className="w-11 h-11 rounded-full bg-warm/70 flex items-center justify-center">
+          <span className="text-[20px]">↑</span>
+        </div>
+        <div className="text-center">
+          <p className="text-[15px] text-ink font-medium">Choose a file</p>
+          <p className="font-mono text-[11px] text-dim mt-1">or drag and drop here · max {maxMb} MB</p>
+        </div>
+      </button>
+      <input ref={inputRef} type="file" accept={accept} className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }}
+      />
+      {error && <p className="font-mono text-[11px] text-red-500 mt-2">{error}</p>}
+    </div>
+  )
 }
 
 function QuestionInput({ question: q, value, onChange, onCommit }: {
@@ -471,6 +543,20 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
       onChange={e => onChange(e.target.value)}
     />
   )
+  if (q.type === 'FILE_UPLOAD') {
+    const opts = q.options as { acceptedTypes?: string; maxSizeMb?: number } | undefined
+    const accept = opts?.acceptedTypes ?? '*/*'
+    const maxMb = opts?.maxSizeMb ?? 10
+    const file = value as File | null | undefined
+    return (
+      <FileUploadWidget
+        accept={accept}
+        maxMb={maxMb}
+        file={file ?? null}
+        onChange={onChange}
+      />
+    )
+  }
   if (q.type === 'SECTION_BREAK' || q.type === 'DESCRIPTION_SLIDE') return <SectionBreakInput onChange={onChange} />
   return (
     <input className={inputStyle}
@@ -516,6 +602,7 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
   const [qcSummary, setQcSummary] = useState<QcSummary | null>(
     qcRaw ? { avgDbfs: qcRaw.avgDbfs ?? 0, pctGood: qcRaw.pctGood ?? 0, sal: qcRaw.sal ?? 0, snr: qcRaw.snr ?? 0, ssl: qcRaw.ssl ?? 0 } : null
   )
+  const [showQcBanner, setShowQcBanner] = useState(false)
 
   const mrRef = useRef<MediaRecorder | null>(null)
   const chunks = useRef<BlobPart[]>([])
@@ -535,7 +622,7 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
     setError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
       })
       const audioCtx = new AudioContext()
       audioCtxRef.current = audioCtx
@@ -549,7 +636,7 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : ''
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 128000 } : undefined)
       mr.ondataavailable = e => e.data.size > 0 && chunks.current.push(e.data)
       mr.onstop = () => {
         const blob = new Blob(chunks.current, { type: mr.mimeType })
@@ -615,10 +702,11 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
     if (waveRef.current) { clearInterval(waveRef.current); waveRef.current = null }
     setState('done')
     setBars(Array(20).fill(4))
+    setShowQcBanner(true)
   }
 
   function reset() {
-    onChange(null); setState('idle'); setQcSummary(null); setLiveDbfs(-60)
+    onChange(null); setState('idle'); setQcSummary(null); setLiveDbfs(-60); setShowQcBanner(false)
     durationRef.current = 0; setDuration(0); setSal(0); setSnr(0); setSsl(0)
   }
 
@@ -629,6 +717,12 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
     audioCtxRef.current?.close()
   }, [])
 
+  useEffect(() => {
+    if (!showQcBanner) return
+    const t = setTimeout(() => setShowQcBanner(false), 3500)
+    return () => clearTimeout(t)
+  }, [showQcBanner])
+
   const meetsMin = duration >= minDuration
 
   // Live metric tiers
@@ -637,20 +731,19 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
   const snrTier: MetricTier = snr >= 13 ? 'good' : snr >= 8 ? 'warn' : 'poor'
   const sslTier: MetricTier = ssl <= 3.3 ? 'good' : ssl <= 5.0 ? 'warn' : 'poor'
 
-  const allPass = !!qcSummary && qcSummary.sal <= 600 && qcSummary.snr >= 13 && qcSummary.ssl <= 3.3
   const txnDone = state === 'done'
 
   return (
     <div className="rounded-2xl border border-warm/70 bg-paper shadow-sm p-5 flex flex-col items-center gap-4 w-full">
 
-      {/* Header: NC badge — timer — TXN badge */}
+      {/* Header: status badge — timer — saved badge */}
       <div className="w-full flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-widest uppercase font-semibold border transition-all
           ${state === 'recording'
-            ? 'bg-indigov/10 text-indigov border-indigov/25'
+            ? 'bg-red-50 text-red-600 border-red-200'
             : 'bg-warm/50 text-dim border-warm/60'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full transition-all ${state === 'recording' ? 'bg-indigov' : 'bg-ghost'}`} />
-          NC {state === 'recording' ? 'ON' : '—'}
+          <span className={`w-1.5 h-1.5 rounded-full transition-all ${state === 'recording' ? 'bg-red-500 animate-pulse' : 'bg-ghost'}`} />
+          {state === 'recording' ? 'Recording' : 'Ready'}
         </span>
 
         <span className={`font-mono text-[44px] font-medium tracking-[-0.04em] tabular-nums leading-none transition-colors
@@ -660,10 +753,10 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
 
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] tracking-widest uppercase font-semibold border transition-all
           ${txnDone
-            ? 'bg-indigov/10 text-indigov border-indigov/25'
+            ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
             : 'bg-warm/50 text-dim border-warm/60'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full transition-all ${txnDone ? 'bg-indigov' : 'bg-ghost'}`} />
-          TXN {txnDone ? 'Q' : '—'}
+          <span className={`w-1.5 h-1.5 rounded-full transition-all ${txnDone ? 'bg-emerald-500' : 'bg-ghost'}`} />
+          {txnDone ? 'Saved' : '—'}
         </span>
       </div>
 
@@ -701,6 +794,21 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
         </div>
       )}
 
+      {/* Live QC guidance messages */}
+      {state === 'recording' && duration > 3 && (() => {
+        if (sal > 600)
+          return <p className="font-mono text-[11px] text-red-500 text-center">Too loud — step back from the mic</p>
+        if (snr < 8 && duration > 5)
+          return <p className="font-mono text-[11px] text-amber-600 text-center">Background noise — move to a quieter place</p>
+        if (liveDbfs < -45)
+          return <p className="font-mono text-[11px] text-amber-600 text-center">Speak up — move mic closer to your mouth</p>
+        if (ssl > 5)
+          return <p className="font-mono text-[11px] text-amber-600 text-center">Unsteady — hold your phone still</p>
+        if (snr >= 13 && liveDbfs > minDbfs)
+          return <p className="font-mono text-[11px] text-slatebl text-center">Signal clear — keep going</p>
+        return null
+      })()}
+
       {/* Record / Stop button */}
       {state !== 'done' ? (
         <button
@@ -732,24 +840,26 @@ function AudioWidget({ minDuration, maxDuration, minDbfs = -18, value, onChange 
         <audio controls src={value.blobUrl} className="w-full h-9" />
       )}
 
-      {/* QC summary */}
-      {state === 'done' && qcSummary && (
-        <div className="w-full rounded-xl border border-warm/60 bg-warm/15 p-3.5 space-y-2">
-          <div className="flex items-center justify-between pb-2 border-b border-warm/50">
-            <span className={`font-mono text-[11px] font-semibold ${allPass ? 'text-slatebl' : 'text-amber-600'}`}>
-              {allPass ? 'Sounds great' : 'Review quality'}
-            </span>
-            <span className="font-mono text-[10px] text-ghost uppercase tracking-widest">Audio Check</span>
+      {/* QC banner — auto-dismisses after 3.5s */}
+      {showQcBanner && qcSummary && (() => {
+        let msg: string
+        let cls: string
+        if (qcSummary.sal > 600) {
+          msg = 'Heads up — the recording was a bit loud. You can re-record or continue.'
+          cls = 'border-amber-300/60 bg-amber-50/60 text-amber-700'
+        } else if (qcSummary.snr < 13) {
+          msg = 'Some background noise was picked up. You can re-record for a cleaner result.'
+          cls = 'border-amber-300/60 bg-amber-50/60 text-amber-700'
+        } else {
+          msg = 'Sounds great — your recording is clear!'
+          cls = 'border-slatebl/25 bg-slatebl/5 text-slatebl'
+        }
+        return (
+          <div className={`w-full rounded-xl border px-4 py-3 font-mono text-[12px] text-center leading-snug ${cls}`}>
+            {msg}
           </div>
-          <AudioSummaryRow label="SAT" value={`${qcSummary.sal} /min`} pass={qcSummary.sal <= 600} limit="≤ 600 /min" />
-          <AudioSummaryRow label="SNR" value={`${qcSummary.snr} dB`}  pass={qcSummary.snr >= 13}  limit="≥ 13 dB" />
-          <AudioSummaryRow label="SSL" value={qcSummary.ssl.toFixed(1)} pass={qcSummary.ssl <= 3.3} limit="≤ 3.3" />
-          <div className="flex items-center gap-2 pt-2 border-t border-warm/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigov/60 shrink-0" />
-            <span className="font-mono text-[10px] text-dim tracking-wide">Transcription queued on submit</span>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Duration hints */}
       <div className="text-center -mt-1">
@@ -791,37 +901,53 @@ function AudioMetricRow({ label, value, tier, barWidth, hint }: {
   )
 }
 
-function AudioSummaryRow({ label, value, pass, limit }: {
-  label: string; value: string; pass: boolean; limit: string
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className={`shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold
-        ${pass ? 'bg-slatebl/15 text-slatebl' : 'bg-red-100 text-red-500'}`}>
-        {pass ? '✓' : '✗'}
-      </span>
-      <span className="font-mono text-[10px] text-dim w-8 shrink-0">{label}</span>
-      <span className={`font-mono text-[12px] font-semibold ${pass ? 'text-ink' : 'text-red-500'}`}>{value}</span>
-      <span className="font-mono text-[10px] text-ghost ml-auto">{limit}</span>
-    </div>
-  )
-}
 
 // ── Location widget ────────────────────────────────────────────────────────────
+const DWELL_MS = 5000   // collect samples for up to 5 s
+const TARGET_M = 20    // stop early if accuracy ≤ 20 m
+
 function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [progress, setProgress] = useState(0)
+  const [bestAccuracy, setBestAccuracy] = useState<number | null>(null)
   const loc = value as { lat: number; lng: number; accuracy: number } | null
 
   const capture = useCallback(() => {
     setState('loading')
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
+    setProgress(0)
+    setBestAccuracy(null)
+    const samples: { lat: number; lng: number; accuracy: number }[] = []
+    const startTime = Date.now()
+    let watchId = -1
+    let finished = false
+
+    const finish = () => {
+      if (finished) return
+      finished = true
+      navigator.geolocation.clearWatch(watchId)
+      if (samples.length > 0) {
+        const best = samples.reduce((a, b) => (a.accuracy <= b.accuracy ? a : b))
+        onChange(best)
         setState('done')
+      } else {
+        setState('error')
+      }
+    }
+
+    watchId = navigator.geolocation.watchPosition(
+      pos => {
+        const s = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }
+        samples.push(s)
+        const elapsed = Date.now() - startTime
+        setProgress(Math.min(98, Math.round((elapsed / DWELL_MS) * 100)))
+        setBestAccuracy(prev => (prev === null || s.accuracy < prev ? s.accuracy : prev))
+        if (s.accuracy <= TARGET_M || elapsed >= DWELL_MS) finish()
       },
       () => setState('error'),
-      { enableHighAccuracy: true, timeout: 15000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
+
+    setTimeout(finish, DWELL_MS + 500)
   }, [onChange])
 
   if (state === 'done' && loc) return (
@@ -873,12 +999,22 @@ function LocationWidget({ value, onChange }: { value: unknown; onChange: (v: unk
               ? 'border-red-300 bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer'
               : 'border-indigov bg-indigov text-paper hover:opacity-85 cursor-pointer shadow-sm'}`}>
         {state === 'loading'
-          ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-dim/40 border-t-dim animate-spin" />Locating…</>
+          ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-dim/40 border-t-dim animate-spin" />Averaging signal…</>
           : state === 'error' ? 'Retry' : 'Capture location'
         }
       </button>
+      {state === 'loading' && (
+        <div className="w-full space-y-1.5">
+          <div className="w-full h-1.5 bg-warm rounded-full overflow-hidden">
+            <div className="h-full bg-indigov rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="font-mono text-[10px] text-ghost text-center">
+            {bestAccuracy !== null ? `Best so far ±${Math.round(bestAccuracy)} m · targeting ±${TARGET_M} m` : 'Acquiring signal…'}
+          </p>
+        </div>
+      )}
       {state === 'idle' && (
-        <p className="font-mono text-[11px] text-ghost">Uses GPS / network positioning</p>
+        <p className="font-mono text-[11px] text-ghost">GPS dwell · targets ±{TARGET_M} m accuracy</p>
       )}
     </div>
   )

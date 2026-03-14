@@ -39,12 +39,12 @@ export function SurveysPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <input
-          className="flex-1 h-9 px-4 border border-warm bg-paper text-[13px] text-ink placeholder:text-ghost focus:outline-none focus:border-ink font-mono transition-colors"
+          className="flex-1 h-9 px-4 border border-warm rounded-lg bg-paper text-[13px] text-ink placeholder:text-ghost focus:outline-none focus:border-ink font-mono transition-colors"
           placeholder="Search surveys…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <div className="flex border border-warm overflow-x-auto shrink-0">
+        <div className="flex border border-warm rounded-lg overflow-hidden shrink-0">
           {STATUSES.map(s => (
             <button key={s} onClick={() => setStatus(s)}
               className={`px-3 h-9 text-[11px] font-mono uppercase tracking-wide transition-colors border-r border-warm last:border-r-0
@@ -94,7 +94,7 @@ export function SurveysPage() {
                 <div className="flex gap-1.5">
                   <Link to={`/surveys/${s.id}`}><Btn variant="outline" size="sm">Edit</Btn></Link>
                   <button onClick={() => { if (confirm('Delete this survey?')) del.mutate(s.id) }}
-                    className="h-8 px-3 text-[13px] text-dim hover:text-red-500 font-sans border border-warm hover:border-red-200 transition-colors">✕</button>
+                    className="h-8 px-3 text-[13px] text-dim hover:text-red-500 font-sans border border-warm hover:border-red-200 rounded-lg transition-colors">✕</button>
                 </div>
               </div>
             ))}

@@ -28,7 +28,7 @@ def _convert_dsn(go_dsn: str) -> str:
     Go:     root:pass@tcp(127.0.0.1:3306)/voxform?parseTime=true&charset=utf8mb4
     Python: mysql+aiomysql://root:pass@127.0.0.1:3306/voxform
     """
-    m = re.match(r"([^:]*):([^@]*)@tcp\(([^)]+)\)/([^?]*)", go_dsn)
+    m = re.match(r"([^:]*):(.+)@tcp\(([^)]+)\)/([^?]*)", go_dsn)
     if not m:
         return go_dsn  # already in URL form
     user, password, host, dbname = m.group(1), m.group(2), m.group(3), m.group(4)

@@ -651,7 +651,7 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── SHARE TAB ────────────────────────────────────────────────────── */}
-        <TabsContent value="share" className="h-[calc(100vh-96px)] overflow-y-auto m-0">
+        <TabsContent value="share" className="overflow-y-auto m-0">
           <div className="max-w-lg mx-auto px-8 py-10 space-y-6">
             <div>
               <h2 className="font-serif text-[24px] tracking-tight text-ink mb-1">Share survey</h2>
@@ -717,7 +717,7 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── PREVIEW TAB ──────────────────────────────────────────────────── */}
-        <TabsContent value="preview" className="h-[calc(100vh-96px)] overflow-y-auto m-0 bg-warm/20">
+        <TabsContent value="preview" className="overflow-y-auto m-0 bg-warm/20">
           <div className="flex flex-col items-center pt-4 pb-8 px-4 gap-3">
 
             {/* Header */}
@@ -852,7 +852,7 @@ export function SurveyBuilderPage() {
         </TabsContent>
 
         {/* ── RESPONSES TAB ────────────────────────────────────────────────── */}
-        <TabsContent value="responses" className="h-[calc(100vh-96px)] overflow-y-auto m-0">
+        <TabsContent value="responses" className="overflow-y-auto m-0">
           <SurveyResponses surveyId={id ?? ''} surveySlug={survey?.slug ?? ''} />
         </TabsContent>
       </Tabs>

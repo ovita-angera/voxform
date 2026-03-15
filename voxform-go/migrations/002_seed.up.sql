@@ -6,16 +6,18 @@ INSERT IGNORE INTO organizations (id, name, slug, plan, settings, created_at, up
  '{"defaultAudioFormat":"WAV_16K","timezone":"Africa/Nairobi"}', NOW(), NOW());
 
 -- admin@nri.ac.ke / voxform123
-INSERT IGNORE INTO users (id, org_id, role, name, email, password_hash, email_verified, preferences, created_at, updated_at) VALUES
+INSERT INTO users (id, org_id, role, name, email, password_hash, email_verified, preferences, created_at, updated_at) VALUES
 ('usr_admin001', 'org_demo001', 'OWNER', 'Jane Mwangi', 'admin@nri.ac.ke',
- '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TiGGR3hCMWJdNRU/rWiibw.sQBpK',
- TRUE, '{"language":"en","timezone":"Africa/Nairobi"}', NOW(), NOW());
+ '$2b$12$Uzx0sgmSgqWLEaHnQ6/Ov.bxXPptHv/DSM/81gJ4cPYhberW9AFWe',
+ TRUE, '{"language":"en","timezone":"Africa/Nairobi"}', NOW(), NOW())
+ON DUPLICATE KEY UPDATE password_hash = '$2b$12$Uzx0sgmSgqWLEaHnQ6/Ov.bxXPptHv/DSM/81gJ4cPYhberW9AFWe', email_verified = TRUE;
 
 -- surveyor@nri.ac.ke / voxform123
-INSERT IGNORE INTO users (id, org_id, role, name, email, password_hash, email_verified, preferences, created_at, updated_at) VALUES
+INSERT INTO users (id, org_id, role, name, email, password_hash, email_verified, preferences, created_at, updated_at) VALUES
 ('usr_surv001', 'org_demo001', 'SURVEYOR', 'John Kamau', 'surveyor@nri.ac.ke',
- '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TiGGR3hCMWJdNRU/rWiibw.sQBpK',
- TRUE, '{"language":"en","timezone":"Africa/Nairobi"}', NOW(), NOW());
+ '$2b$12$Uzx0sgmSgqWLEaHnQ6/Ov.bxXPptHv/DSM/81gJ4cPYhberW9AFWe',
+ TRUE, '{"language":"en","timezone":"Africa/Nairobi"}', NOW(), NOW())
+ON DUPLICATE KEY UPDATE password_hash = '$2b$12$Uzx0sgmSgqWLEaHnQ6/Ov.bxXPptHv/DSM/81gJ4cPYhberW9AFWe', email_verified = TRUE;
 
 INSERT IGNORE INTO org_members (id, org_id, user_id, role, invited_at, joined_at) VALUES
 ('mbr_001', 'org_demo001', 'usr_admin001', 'OWNER', NOW(), NOW()),
@@ -41,16 +43,16 @@ INSERT IGNORE INTO questions (id, survey_id, type, title, description, required,
  '{"choices":[{"id":"a","label":"Farming / Agriculture"},{"id":"b","label":"Formal employment"},{"id":"c","label":"Informal / self-employment"},{"id":"d","label":"Remittances from family"},{"id":"e","label":"Social assistance / grants"}]}',
  NOW(), NOW()),
 
-('q_003', 'srv_demo001', 'AUDIO_CAPTURE',
+('q_003', 'srv_demo001', 'VOICE_RESPONSE',
  'Describe the household''s financial situation over the past 6 months',
  'Speak clearly for at least 30 seconds. Include income changes, major expenses, and coping strategies.',
  TRUE, 2,
  '{"minDurationSec":30,"maxDurationSec":300,"qcEnabled":true}', NOW(), NOW()),
 
-('q_004', 'srv_demo001', 'LIKERT', 'Rate the household''s current food security',
- '', TRUE, 3,
+('q_004', 'srv_demo001', 'STAR_RATING', 'Rate the household''s current food security',
+ '1 = Very food insecure, 5 = Very food secure', TRUE, 3,
  '{"min":1,"max":5,"minLabel":"Very food insecure","maxLabel":"Very food secure"}', NOW(), NOW()),
 
-('q_005', 'srv_demo001', 'LOCATION', 'Record respondent location',
- 'GPS coordinates will be captured automatically', TRUE, 4,
- '{"accuracy":"high"}', NOW(), NOW());
+('q_005', 'srv_demo001', 'SHORT_TEXT', 'Record respondent location',
+ 'Enter the GPS coordinates or nearest landmark', TRUE, 4,
+ '{"placeholder":"e.g. -1.2921, 36.8219 or nearest landmark"}', NOW(), NOW());

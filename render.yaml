@@ -21,6 +21,9 @@ services:
       # STORAGE_URL   = https://voxform-api.onrender.com/storage
       - key: STORAGE_URL
         sync: false
+      # APP_URL       = https://your-app.vercel.app  (used in email verification links)
+      - key: APP_URL
+        sync: false
       # CORS_ORIGINS  = https://your-app.vercel.app
       - key: CORS_ORIGINS
         sync: false

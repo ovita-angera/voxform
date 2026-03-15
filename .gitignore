@@ -1,1 +1,7 @@
 .claude/
+
+# Environment files with secrets — never commit these
+voxform-go/.env.local
+voxform-fastapi/.env.local
+.env.local
+.env

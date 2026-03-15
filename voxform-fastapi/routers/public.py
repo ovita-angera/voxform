@@ -93,6 +93,39 @@ async def complete_session(session_id: str, db: Database = Depends(get_db)):
     return _ok({"sessionId": session_id, "status": "COMPLETED"})
 
 
+@router.post("/public/images/upload/{response_id}", status_code=201)
+async def upload_image(
+    response_id: str,
+    file: UploadFile = File(...),
+    db: Database = Depends(get_db),
+):
+    session = await db.fetch_one(
+        "SELECT id FROM sessions WHERE id = (SELECT session_id FROM responses WHERE id = :rid LIMIT 1)",
+        {"rid": response_id},
+    )
+    if not session:
+        _err(404, "response not found")
+
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"):
+        ext = ".jpg"
+
+    img_dir = os.path.join(config.STORAGE_PATH, "images")
+    os.makedirs(img_dir, exist_ok=True)
+    save_path = os.path.join(img_dir, f"{response_id}{ext}")
+
+    content = await file.read(50 * 1024 * 1024)  # 50 MB limit
+    with open(save_path, "wb") as f:
+        f.write(content)
+
+    public_url = f"{config.STORAGE_URL}/images/{response_id}{ext}"
+    await db.execute(
+        "UPDATE responses SET text_value = :url, updated_at = NOW() WHERE id = :id",
+        {"url": public_url, "id": response_id},
+    )
+    return _ok({"url": public_url, "bytes": len(content)})
+
+
 @router.post("/public/audio/slot")
 async def create_audio_slot(request: Request, db: Database = Depends(get_db)):
     body = await request.json()

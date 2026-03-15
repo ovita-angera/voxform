@@ -51,5 +51,11 @@ export function useAuth() {
     navigate('/login')
   }, [navigate])
 
-  return { user, loading, login, register, logout }
+  const refreshUser = useCallback(async () => {
+    const u = await api.get<AuthUser>('/users/me')
+    globalUser = u; notify()
+    return u
+  }, [])
+
+  return { user, loading, login, register, logout, refreshUser }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp, Mic, Play, Pause, Download } from 'lucide-react'
@@ -347,7 +347,7 @@ function exportCsv(
 }
 
 function downloadZip(surveyId: string, surveyTitle: string) {
-  const token = localStorage.getItem('accessToken') ?? ''
+  const token = localStorage.getItem('vf_token') ?? ''
   fetch(`/api/v1/responses/export/zip?surveyId=${surveyId}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -521,9 +521,8 @@ export function ResponsesPage() {
                   const audioN = sessResponses.filter(r => AUDIO_TYPES.has(r.type)).length
 
                   return (
-                    <>
+                    <React.Fragment key={sess.id}>
                       <tr
-                        key={sess.id}
                         onClick={() => setOpenSessionId(isOpen ? null : sess.id)}
                         className={cn(
                           'cursor-pointer border-b border-warm transition-colors',
@@ -564,13 +563,12 @@ export function ResponsesPage() {
                       </tr>
 
                       {isOpen && (
-                        <tr key={`${sess.id}-detail`} className="border-b border-warm">
+                        <tr className="border-b border-warm">
                           <td colSpan={4 + tableQuestions.length + (sortedQuestions.length > TABLE_Q_LIMIT ? 1 : 0)} className="p-0">
                             <SessionDetail
                               session={sess}
                               responses={sessResponses}
                               questions={sortedQuestions}
-
                               onApprove={approveMut.mutate}
                               onReject={rejectMut.mutate}
                               isPending={approveMut.isPending || rejectMut.isPending}
@@ -578,7 +576,7 @@ export function ResponsesPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   )
                 })}
               </tbody>

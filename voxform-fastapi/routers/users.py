@@ -59,6 +59,22 @@ async def update(request: Request, claims: dict = Depends(get_current_user),
     return _ok(_safe(user))
 
 
+@router.put("/orgs/plan")
+async def update_plan(request: Request, claims: dict = Depends(get_current_user),
+                      db: Database = Depends(get_db)):
+    body = await request.json()
+    plan = (body.get("plan") or "").upper()
+    if plan not in ("FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"):
+        from fastapi import HTTPException
+        raise HTTPException(400, detail={"success": False, "message": "plan must be FREE, STARTER, PRO, BUSINESS, or ENTERPRISE"})
+    await db.execute(
+        "UPDATE organizations SET plan = :plan, updated_at = NOW() WHERE id = :oid",
+        {"plan": plan, "oid": claims["org_id"]},
+    )
+    org = await db.fetch_one("SELECT * FROM organizations WHERE id = :id", {"id": claims["org_id"]})
+    return _ok(dict(org) if org else {})
+
+
 @router.get("/users/org/members")
 async def org_members(claims: dict = Depends(get_current_user), db: Database = Depends(get_db)):
     rows = await db.fetch_all(

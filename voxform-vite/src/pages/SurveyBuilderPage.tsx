@@ -7,8 +7,11 @@ import {
   Grid3X3, Upload, AlignJustify, Star, FileText, LayoutTemplate,
   Copy, ExternalLink, QrCode, Trash2, ChevronRight, Plus,
   Check, Loader2, Search, X, ChevronLeft, ChevronUp, Play, Pause, List, MapPin,
+  Camera, Globe, SlidersHorizontal, ListOrdered, BarChart2, Gauge,
+  Download, Zap,
 } from 'lucide-react'
 import { api } from '@/lib/api/client'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { StatusDot } from '@/components/ui'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/shadcn/tabs'
 import { cn } from '@/lib/utils/cn'
@@ -29,33 +32,39 @@ const Q_CATEGORIES = [
       { type: 'DATE',              icon: CalendarDays,   label: 'Date',              desc: 'Date picker input' },
       { type: 'PHONE',             icon: Phone,          label: 'Phone',             desc: 'Phone number with formatting' },
       { type: 'LONG_TEXT',         icon: FileText,       label: 'Long Text',         desc: 'Multi-line paragraph answer' },
-      { type: 'LOCATION',          icon: MapPin,         label: 'Location GPS',      desc: 'Capture precise GPS coordinates' },
+      { type: 'LOCATION',          icon: MapPin,             label: 'Location GPS',      desc: 'Capture precise GPS coordinates' },
+      { type: 'IMAGE_UPLOAD',      icon: Camera,             label: 'Photo / Camera',    desc: 'Upload an image or take a photo' },
+      { type: 'WEBSITE_URL',       icon: Globe,              label: 'Website URL',       desc: 'Enter a website or link' },
     ],
   },
   {
     label: 'Single Choice',
     iconColor: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40',
     types: [
-      { type: 'YES_NO',            icon: ToggleLeft,     label: 'Yes / No',          desc: 'Simple binary choice' },
-      { type: 'DROPDOWN',          icon: ChevronDown,    label: 'Dropdown',          desc: 'Select one from a list' },
-      { type: 'SINGLE_CHOICE',     icon: LayoutTemplate, label: 'Radio Buttons',     desc: 'Choose exactly one option' },
+      { type: 'YES_NO',            icon: ToggleLeft,         label: 'Yes / No',          desc: 'Simple binary choice' },
+      { type: 'DROPDOWN',          icon: ChevronDown,        label: 'Dropdown',          desc: 'Select one from a list' },
+      { type: 'SINGLE_CHOICE',     icon: LayoutTemplate,     label: 'Radio Buttons',     desc: 'Choose exactly one option' },
+      { type: 'SLIDER',            icon: SlidersHorizontal,  label: 'Slider',            desc: 'Pick a value along a range' },
+      { type: 'LIKERT',            icon: Gauge,              label: 'Likert Scale',      desc: 'Numbered scale with labels' },
     ],
   },
   {
     label: 'Multiple Choice',
     iconColor: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40',
     types: [
-      { type: 'MULTIPLE_CHOICE',   icon: CheckSquare,    label: 'Checkboxes',        desc: 'Select all that apply' },
-      { type: 'MATRIX',            icon: Grid3X3,        label: 'Matrix Grid',       desc: 'Rate multiple items in a grid' },
+      { type: 'MULTIPLE_CHOICE',   icon: CheckSquare,        label: 'Checkboxes',        desc: 'Select all that apply' },
+      { type: 'MATRIX',            icon: Grid3X3,            label: 'Matrix Grid',       desc: 'Rate multiple items in a grid' },
+      { type: 'RANKING',           icon: ListOrdered,        label: 'Ranking',           desc: 'Rank options in order of preference' },
     ],
   },
   {
     label: 'Display & Other',
     iconColor: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40',
     types: [
-      { type: 'STAR_RATING',       icon: Star,           label: 'Star Rating',       desc: 'Rate something with stars' },
-      { type: 'FILE_UPLOAD',       icon: Upload,         label: 'File Upload',       desc: 'Accept file submissions' },
-      { type: 'DESCRIPTION_SLIDE', icon: AlignJustify,   label: 'Description Slide', desc: 'Add an informational section' },
+      { type: 'STAR_RATING',       icon: Star,               label: 'Star Rating',       desc: 'Rate something with stars' },
+      { type: 'NPS',               icon: BarChart2,          label: 'NPS Score',         desc: 'Net Promoter Score 0–10' },
+      { type: 'FILE_UPLOAD',       icon: Upload,             label: 'File Upload',       desc: 'Accept file submissions' },
+      { type: 'DESCRIPTION_SLIDE', icon: AlignJustify,       label: 'Description Slide', desc: 'Add an informational section' },
     ],
   },
 ]
@@ -87,6 +96,8 @@ type SaveState = 'idle' | 'saving' | 'saved'
 export function SurveyBuilderPage() {
   const { id } = useParams<{ id: string }>()
   const qc = useQueryClient()
+  const { user } = useAuth()
+  const isPro = (user?.org?.plan ?? '').toUpperCase() === 'PRO'
 
   const { data: survey } = useQuery<Survey>({
     queryKey: ['survey', id],
@@ -105,6 +116,7 @@ export function SurveyBuilderPage() {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [copied, setCopied] = useState(false)
   const [showList, setShowList] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string>('')
 
   const qSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const titleSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -200,6 +212,19 @@ export function SurveyBuilderPage() {
   }
 
   const shareUrl = survey ? `${window.location.origin}/s/${survey.slug}` : ''
+
+  useEffect(() => {
+    if (shareUrl && isPro && survey?.status === 'ACTIVE') {
+      import('qrcode').then(mod => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const QRCode: typeof mod = (mod as any).default ?? mod
+        return QRCode.toDataURL(shareUrl, { width: 200, margin: 2, color: { dark: '#141414', light: '#F2F0EB' } })
+      }).then(setQrDataUrl).catch(() => setQrDataUrl(''))
+    } else {
+      setQrDataUrl('')
+    }
+  }, [shareUrl, isPro, survey?.status])
+
   function copyLink() {
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000)
@@ -696,15 +721,42 @@ export function SurveyBuilderPage() {
                 </div>
 
                 <div className="rounded-xl border border-warm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-warm bg-warm/20">
+                  <div className="px-4 py-3 border-b border-warm bg-warm/20 flex items-center justify-between">
                     <p className="text-[11px] font-mono text-dim uppercase tracking-widest">QR Code</p>
+                    {isPro && <span className="text-[10px] font-mono bg-violet text-white px-2 py-0.5 rounded-full">PRO</span>}
                   </div>
-                  <div className="px-4 py-6 flex flex-col items-center gap-3">
-                    <div className="w-28 h-28 rounded-xl border border-warm flex items-center justify-center bg-warm/20">
-                      <QrCode size={48} className="text-dim opacity-40" />
+                  {isPro ? (
+                    <div className="px-4 py-6 flex flex-col items-center gap-3">
+                      {qrDataUrl ? (
+                        <>
+                          <img src={qrDataUrl} alt="Survey QR code" className="w-40 h-40 rounded-xl border border-warm" />
+                          <a href={qrDataUrl} download={`survey-${survey?.slug ?? 'qr'}.png`}
+                            className="flex items-center gap-1.5 text-[12px] font-mono text-dim hover:text-ink transition-colors">
+                            <Download size={12} />Download PNG
+                          </a>
+                        </>
+                      ) : (
+                        <div className="w-40 h-40 rounded-xl border border-warm flex items-center justify-center bg-warm/20">
+                          <Loader2 size={20} className="text-dim animate-spin" />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[11px] font-mono text-dim text-center">QR code generation available in Pro plan</p>
-                  </div>
+                  ) : (
+                    <div className="px-4 py-6 flex flex-col items-center gap-3 text-center">
+                      <div className="w-28 h-28 rounded-xl border border-dashed border-warm flex items-center justify-center bg-warm/10 opacity-50">
+                        <QrCode size={40} className="text-dim" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-medium text-ink mb-1">QR code is a Pro feature</p>
+                        <p className="text-[11px] font-mono text-dim mb-3">Upgrade to generate and download a scannable QR code for this survey.</p>
+                        <Link to="/settings">
+                          <button className="inline-flex items-center gap-1.5 h-8 px-4 text-[12px] font-medium rounded-lg bg-violet text-white hover:bg-violet/90 transition-colors">
+                            <Zap size={12} />Upgrade to Pro
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -1113,6 +1165,86 @@ function TypeSettings({ q, setQ }: { q: Question; setQ: React.Dispatch<React.Set
     )
   }
 
+  if (q.type === 'SLIDER') {
+    const opts = q.options as { min?: number; max?: number; step?: number; minLabel?: string; maxLabel?: string } | undefined
+    return (
+      <div className="space-y-4">
+        <div className="h-px bg-warm" />
+        <div>
+          <label className={labelCls}>Range</label>
+          <div className="flex gap-2 items-center">
+            <input type="number" className={cn(fieldCls, 'flex-1')} placeholder="Min" value={opts?.min ?? 0} onChange={e => setOpts({ min: Number(e.target.value) })} />
+            <span className="text-dim text-[13px]">–</span>
+            <input type="number" className={cn(fieldCls, 'flex-1')} placeholder="Max" value={opts?.max ?? 100} onChange={e => setOpts({ max: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>Step</label>
+          <input type="number" className={fieldCls} value={opts?.step ?? 1} min={1} onChange={e => setOpts({ step: Number(e.target.value) })} />
+        </div>
+        <div className="space-y-2">
+          <label className={labelCls}>End labels</label>
+          <input className={fieldCls} placeholder="Low label" value={opts?.minLabel ?? ''} onChange={e => setOpts({ minLabel: e.target.value })} />
+          <input className={fieldCls} placeholder="High label" value={opts?.maxLabel ?? ''} onChange={e => setOpts({ maxLabel: e.target.value })} />
+        </div>
+      </div>
+    )
+  }
+
+  if (q.type === 'IMAGE_UPLOAD') {
+    const opts = q.options as { maxSizeMb?: number; allowCamera?: boolean } | undefined
+    return (
+      <div className="space-y-4">
+        <div className="h-px bg-warm" />
+        <div>
+          <label className={labelCls}>Max size (MB)</label>
+          <input type="number" className={fieldCls} value={opts?.maxSizeMb ?? 10} min={1} max={50} onChange={e => setOpts({ maxSizeMb: Number(e.target.value) })} />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[13px] font-medium text-ink">Allow camera capture</p>
+            <p className="text-[11px] text-dim mt-0.5">Let respondents take a photo</p>
+          </div>
+          <button type="button" onClick={() => setOpts({ allowCamera: !(opts?.allowCamera ?? true) })}
+            className={cn('w-11 h-6 rounded-full border-2 transition-all relative shrink-0 cursor-pointer',
+              (opts?.allowCamera ?? true) ? 'bg-violet border-violet' : 'bg-warm border-ghost/60')}>
+            <span className={cn('absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full shadow-sm transition-all duration-200',
+              (opts?.allowCamera ?? true) ? 'right-[2px] bg-white' : 'left-[2px] bg-ghost')} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (q.type === 'RANKING') {
+    const choices = (q.options?.choices as { id: string; label: string }[]) ?? [
+      { id: '1', label: 'Option A' },
+      { id: '2', label: 'Option B' },
+      { id: '3', label: 'Option C' },
+    ]
+    return (
+      <div>
+        <div className="h-px bg-warm mb-5" />
+        <label className={labelCls}>Items to rank</label>
+        <div className="space-y-2">
+          {choices.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-dim w-4 shrink-0">{i + 1}</span>
+              <input className={cn(fieldCls, 'flex-1')} value={c.label}
+                onChange={e => { const u = choices.map((x, j) => j === i ? { ...x, label: e.target.value } : x); setOpts({ choices: u }) }} />
+              <button onClick={() => setOpts({ choices: choices.filter((_, j) => j !== i) })}
+                className="p-1.5 text-dim hover:text-red-400 rounded transition-colors"><Trash2 size={12} /></button>
+            </div>
+          ))}
+          <button onClick={() => setOpts({ choices: [...choices, { id: Date.now().toString(), label: `Item ${choices.length + 1}` }] })}
+            className="text-[12px] font-mono text-dim hover:text-violet transition-colors mt-1 flex items-center gap-1">
+            <Plus size={11} /> Add item
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -1304,6 +1436,64 @@ function QuestionPreview({ q }: { q: Question }) {
       <div className="flex-1 h-px bg-warm" />
     </div>
   )
+  if (q.type === 'SLIDER') {
+    const opts = q.options as { min?: number; max?: number; step?: number; minLabel?: string; maxLabel?: string } | undefined
+    const mid = Math.round(((opts?.min ?? 0) + (opts?.max ?? 100)) / 2)
+    return (
+      <div className="space-y-2 py-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] font-mono text-dim w-8">{opts?.min ?? 0}</span>
+          <div className="flex-1 relative h-2 bg-warm rounded-full">
+            <div className="absolute left-0 top-0 h-2 bg-violet/50 rounded-full" style={{ width: '50%' }} />
+            <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-violet border-2 border-white shadow-sm" />
+          </div>
+          <span className="text-[12px] font-mono text-dim w-8 text-right">{opts?.max ?? 100}</span>
+        </div>
+        <div className="text-center font-mono text-[13px] text-ink font-medium">{mid}</div>
+        {(opts?.minLabel ?? opts?.maxLabel) && (
+          <div className="flex justify-between text-[10px] font-mono text-dim">
+            <span>{opts?.minLabel}</span><span>{opts?.maxLabel}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+  if (q.type === 'WEBSITE_URL') return (
+    <div className="flex items-center h-11 border border-warm rounded-lg overflow-hidden px-3 gap-2 text-dim">
+      <Globe size={13} className="shrink-0 opacity-50" />
+      <span className="text-[13px]">https://…</span>
+    </div>
+  )
+  if (q.type === 'IMAGE_UPLOAD') {
+    const allowCam = (q.options as { allowCamera?: boolean })?.allowCamera ?? true
+    return (
+      <div className="border-2 border-dashed border-warm rounded-xl p-6 flex flex-col items-center gap-2 bg-warm/5">
+        <Camera size={22} className="text-dim opacity-40" />
+        <p className="text-[13px] text-dim">Upload an image</p>
+        {allowCam && <p className="text-[11px] font-mono text-dim">or use your camera</p>}
+      </div>
+    )
+  }
+  if (q.type === 'RANKING') {
+    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? [
+      { id: '1', label: 'Option A' },
+      { id: '2', label: 'Option B' },
+      { id: '3', label: 'Option C' },
+    ]
+    return (
+      <div className="space-y-1.5">
+        {choices.map((c, i) => (
+          <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 border border-warm rounded-lg cursor-move">
+            <span className="text-[11px] font-mono text-dim w-4 shrink-0">{i + 1}</span>
+            <span className="text-[14px] text-ink flex-1">{c.label}</span>
+            <div className="flex flex-col gap-[2px] opacity-30">
+              {[0,1,2].map(j => <div key={j} className="w-3 h-[2px] bg-dim rounded-full" />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className="h-11 border border-warm rounded-lg flex items-center px-4 text-dim text-[13px]">
       Your answer…

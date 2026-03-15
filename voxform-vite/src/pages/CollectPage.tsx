@@ -13,6 +13,43 @@ interface Survey {
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api/v1'
 
+// ── WAV encoder ────────────────────────────────────────────────────────────────
+function _writeStr(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i))
+}
+function _encodeWav(audioBuffer: AudioBuffer): Blob {
+  const sr = audioBuffer.sampleRate
+  const samples = audioBuffer.getChannelData(0)
+  const pcm = new Int16Array(samples.length)
+  for (let i = 0; i < samples.length; i++)
+    pcm[i] = Math.max(-32768, Math.min(32767, Math.round(samples[i] * 32767)))
+  const buf = new ArrayBuffer(44 + pcm.buffer.byteLength)
+  const v = new DataView(buf)
+  _writeStr(v, 0, 'RIFF'); v.setUint32(4, 36 + pcm.buffer.byteLength, true)
+  _writeStr(v, 8, 'WAVE'); _writeStr(v, 12, 'fmt ')
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true)
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true)
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true)
+  _writeStr(v, 36, 'data'); v.setUint32(40, pcm.buffer.byteLength, true)
+  new Int16Array(buf, 44).set(pcm)
+  return new Blob([buf], { type: 'audio/wav' })
+}
+async function _blobToWav(blob: Blob, targetSr = 16000): Promise<Blob> {
+  try {
+    const arrayBuf = await blob.arrayBuffer()
+    const decodeCtx = new AudioContext()
+    const decoded = await decodeCtx.decodeAudioData(arrayBuf)
+    await decodeCtx.close()
+    const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * targetSr), targetSr)
+    const src = offlineCtx.createBufferSource()
+    src.buffer = decoded; src.connect(offlineCtx.destination); src.start()
+    const rendered = await offlineCtx.startRendering()
+    return _encodeWav(rendered)
+  } catch {
+    return blob // fallback: return original if conversion fails
+  }
+}
+
 // ── Submit helpers ─────────────────────────────────────────────────────────────
 async function startSession(slug: string): Promise<string | null> {
   try {
@@ -29,7 +66,11 @@ async function submitResponse(sessionId: string, q: Question, value: unknown): P
   try {
     const body: Record<string, unknown> = { questionId: q.id, type: q.type }
     if (q.type !== 'VOICE_RESPONSE' && q.type !== 'AUDIO_CAPTURE' && q.type !== 'AUDIO_QUESTION') {
-      body.textValue = typeof value === 'string' ? value : JSON.stringify(value)
+      if (value instanceof File) {
+        body.textValue = value.name  // store filename; actual upload via separate route if needed
+      } else {
+        body.textValue = typeof value === 'string' ? value : JSON.stringify(value)
+      }
     } else {
       body.audioDurationSec = (value as AudioValue)?.duration ?? 0
     }
@@ -56,10 +97,18 @@ async function uploadAudio(responseId: string, blob: Blob, mimeType: string, qcR
     const uploadId = slotData.data?.uploadId ?? slotData.uploadId
     if (!uploadId) return
     const fd = new FormData()
-    fd.append('file', blob, `audio${mimeType.includes('wav') ? '.wav' : '.webm'}`)
+    fd.append('file', blob, 'audio.wav')
     fd.append('responseId', responseId)
     if (qcResult) fd.append('clientQcResult', JSON.stringify(qcResult))
     await fetch(`${BASE}/public/audio/upload/${uploadId}`, { method: 'POST', body: fd })
+  } catch { /* best effort */ }
+}
+
+async function uploadImage(responseId: string, file: File) {
+  try {
+    const fd = new FormData()
+    fd.append('file', file, file.name)
+    await fetch(`${BASE}/public/images/upload/${responseId}`, { method: 'POST', body: fd })
   } catch { /* best effort */ }
 }
 
@@ -117,7 +166,12 @@ export function CollectPage() {
           const isAudio = q.type === 'VOICE_RESPONSE' || q.type === 'AUDIO_CAPTURE' || q.type === 'AUDIO_QUESTION'
           if (responseId && isAudio && (val as AudioValue)?.blob) {
             const av = val as AudioValue
-            await uploadAudio(responseId, av.blob, av.mimeType ?? 'audio/webm', av.qcResult)
+            const sampleRateHz = (q.options as { sampleRateHz?: number })?.sampleRateHz ?? 16000
+            const wavBlob = av.mimeType?.includes('wav') ? av.blob : await _blobToWav(av.blob, sampleRateHz)
+            await uploadAudio(responseId, wavBlob, 'audio/wav', av.qcResult)
+          }
+          if (responseId && q.type === 'IMAGE_UPLOAD' && val instanceof File) {
+            await uploadImage(responseId, val)
           }
         }
         await completeSession(sid)
@@ -522,6 +576,130 @@ function QuestionInput({ question: q, value, onChange, onCommit }: {
             ★
           </button>
         ))}
+      </div>
+    )
+  }
+  if (q.type === 'SLIDER') {
+    const opts = q.options as { min?: number; max?: number; step?: number; minLabel?: string; maxLabel?: string } | undefined
+    const min = opts?.min ?? 0; const max = opts?.max ?? 100; const step = opts?.step ?? 1
+    const cur = (value as number) ?? Math.round((min + max) / 2)
+    return (
+      <div className="space-y-4 py-2">
+        <div className="text-center">
+          <span className="text-[28px] font-serif text-ink font-medium tabular-nums">{cur}</span>
+        </div>
+        <input type="range" min={min} max={max} step={step} value={cur}
+          onChange={e => onChange(Number(e.target.value))}
+          className="w-full accent-violet cursor-pointer h-2 rounded-full appearance-none bg-warm"
+          style={{ background: `linear-gradient(to right, rgb(var(--violet)) 0%, rgb(var(--violet)) ${((cur - min) / (max - min)) * 100}%, rgb(var(--warm)) ${((cur - min) / (max - min)) * 100}%, rgb(var(--warm)) 100%)` }}
+        />
+        {(opts?.minLabel ?? opts?.maxLabel) && (
+          <div className="flex justify-between font-mono text-[11px] text-dim">
+            <span>{opts?.minLabel ?? min}</span><span>{opts?.maxLabel ?? max}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+  if (q.type === 'WEBSITE_URL') return (
+    <input className={inputStyle} type="url"
+      value={value as string ?? ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder="https://example.com"
+    />
+  )
+  if (q.type === 'IMAGE_UPLOAD') {
+    const opts = q.options as { maxSizeMb?: number; allowCamera?: boolean } | undefined
+    const maxMb = opts?.maxSizeMb ?? 10
+    const allowCam = opts?.allowCamera ?? true
+    const img = value as File | null | undefined
+    const previewUrl = img ? URL.createObjectURL(img) : null
+    return (
+      <div className="space-y-3">
+        {previewUrl && (
+          <div className="relative rounded-xl overflow-hidden border border-warm">
+            <img src={previewUrl} alt="Preview" className="w-full max-h-52 object-cover" />
+            <button type="button" onClick={() => onChange(null)}
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink/70 text-paper flex items-center justify-center text-[11px] hover:bg-ink transition-colors">
+              ✕
+            </button>
+          </div>
+        )}
+        {!img && (
+          <div className="flex gap-2">
+            <label className="flex-1 cursor-pointer">
+              <div className="border-2 border-dashed border-warm rounded-xl py-6 flex flex-col items-center gap-2 hover:border-ink transition-colors bg-warm/5">
+                <span className="text-[22px]">🖼</span>
+                <p className="text-[13px] text-dim">Upload image</p>
+                <p className="text-[11px] font-mono text-ghost">Max {maxMb}MB</p>
+              </div>
+              <input type="file" accept="image/*" className="sr-only"
+                onChange={e => { const f = e.target.files?.[0]; if (f) onChange(f) }} />
+            </label>
+            {allowCam && (
+              <label className="flex-1 cursor-pointer">
+                <div className="border-2 border-dashed border-warm rounded-xl py-6 flex flex-col items-center gap-2 hover:border-ink transition-colors bg-warm/5">
+                  <span className="text-[22px]">📷</span>
+                  <p className="text-[13px] text-dim">Take photo</p>
+                </div>
+                <input type="file" accept="image/*" capture="environment" className="sr-only"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) onChange(f) }} />
+              </label>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+  if (q.type === 'RANKING') {
+    const choices = (q.options as { choices?: { id: string; label: string }[] })?.choices ?? []
+    const ranked: string[] = (value as string[]) ?? []
+    const unranked = choices.filter(c => !ranked.includes(c.id))
+    function moveUp(idx: number) {
+      if (idx === 0) return
+      const r = [...ranked]; [r[idx - 1], r[idx]] = [r[idx], r[idx - 1]]; onChange(r)
+    }
+    function moveDown(idx: number) {
+      if (idx === ranked.length - 1) return
+      const r = [...ranked]; [r[idx], r[idx + 1]] = [r[idx + 1], r[idx]]; onChange(r)
+    }
+    return (
+      <div className="space-y-2">
+        {ranked.length > 0 && (
+          <div className="space-y-1.5 mb-3">
+            {ranked.map((cid, i) => {
+              const c = choices.find(x => x.id === cid)
+              return c ? (
+                <div key={cid} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-ink bg-ink text-paper">
+                  <span className="text-[11px] font-mono w-5 shrink-0 opacity-60">{i + 1}</span>
+                  <span className="text-[14px] flex-1">{c.label}</span>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => moveUp(i)} disabled={i === 0}
+                      className="w-6 h-6 flex items-center justify-center rounded opacity-60 hover:opacity-100 disabled:opacity-20">▲</button>
+                    <button type="button" onClick={() => moveDown(i)} disabled={i === ranked.length - 1}
+                      className="w-6 h-6 flex items-center justify-center rounded opacity-60 hover:opacity-100 disabled:opacity-20">▼</button>
+                    <button type="button" onClick={() => onChange(ranked.filter(x => x !== cid))}
+                      className="w-6 h-6 flex items-center justify-center rounded opacity-60 hover:opacity-100 text-[11px]">✕</button>
+                  </div>
+                </div>
+              ) : null
+            })}
+          </div>
+        )}
+        {unranked.length > 0 && (
+          <div className="space-y-1.5">
+            {unranked.length < choices.length && <p className="text-[11px] font-mono text-dim mb-2">Tap to add to ranking:</p>}
+            {unranked.map(c => (
+              <button key={c.id} type="button" onClick={() => onChange([...ranked, c.id])}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-warm hover:border-ink hover:shadow-sm transition-all text-left">
+                <span className="text-[11px] font-mono text-ghost w-5 shrink-0">—</span>
+                <span className="text-[14px] text-ink flex-1">{c.label}</span>
+                <span className="text-[11px] font-mono text-dim">tap to rank</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {choices.length === 0 && <p className="text-[13px] text-dim italic">No items configured.</p>}
       </div>
     )
   }
